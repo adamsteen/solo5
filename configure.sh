@@ -148,7 +148,7 @@ case $(uname -s) in
         for f in ${SRCS_X86}; do cp -f ${INCDIR}/$f ${HOST_INCDIR}/x86; done
         for f in ${SRCS}; do cp -f ${INCDIR}/$f ${HOST_INCDIR}; done
 
-        HOST_CFLAGS="-nostdlibinc"
+        HOST_CFLAGS="-fPIC -nostdlibinc"
         BUILD_UKVM="no"
         BUILD_VIRTIO="yes"
         BUILD_MUEN="no"
