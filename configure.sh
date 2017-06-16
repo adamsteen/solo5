@@ -55,6 +55,9 @@ case ${TARGET} in
     x86_64-*)
 	TARGET_ARCH=x86_64
         ;;
+    amd64-*)
+	TARGET_ARCH=x86_64
+        ;;
     *)
         die "Unsupported compiler target: ${TARGET}"
         ;;
@@ -120,6 +123,35 @@ case $(uname -s) in
         BUILD_UKVM="yes"
         BUILD_VIRTIO="yes"
         BUILD_MUEN="yes"
+        ;;
+    OpenBSD)
+        # On OpenBSD/clang we use -nostdlibinc which gives us access to the
+        # clang-provided headers for compiler instrinsics. We copy the rest
+        # (std*.h, float.h and their dependencies) from the host.
+        cc_is_clang || die "Only 'clang' is supported on OpenBSD"
+        [ "${TARGET_ARCH}" = "x86_64" ] ||
+            die "Only 'x86_64' is supported on OpenBSD"
+        INCDIR=/usr/include
+        SRCS_MACH="machine/_types.h machine/cdefs.h machine/endian.h \
+            machine/limits.h"
+        SRCS_SYS="sys/_null.h sys/stdint.h sys/_types.h sys/cdefs.h \
+            sys/endian.h"
+        SRCS_X86="amd64/_float.h amd64/stdarg.h amd64/endian.h \
+            amd64/_types.h amd64/limits.h"
+        SRCS="float.h stddef.h stdint.h stdbool.h stdarg.h"
+
+
+        mkdir -p ${HOST_INCDIR}
+        mkdir -p ${HOST_INCDIR}/machine ${HOST_INCDIR}/sys ${HOST_INCDIR}/x86
+        for f in ${SRCS_MACH}; do cp -f ${INCDIR}/$f ${HOST_INCDIR}/machine; done
+        for f in ${SRCS_SYS}; do cp -f ${INCDIR}/$f ${HOST_INCDIR}/sys; done
+        for f in ${SRCS_X86}; do cp -f ${INCDIR}/$f ${HOST_INCDIR}/x86; done
+        for f in ${SRCS}; do cp -f ${INCDIR}/$f ${HOST_INCDIR}; done
+
+        HOST_CFLAGS="-nostdlibinc"
+        BUILD_UKVM="no"
+        BUILD_VIRTIO="yes"
+        BUILD_MUEN="no"
         ;;
     *)
         die "Unsupported build OS: $(uname -s)"
