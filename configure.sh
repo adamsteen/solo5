@@ -132,13 +132,10 @@ case $(uname -s) in
         [ "${TARGET_ARCH}" = "x86_64" ] ||
             die "Only 'x86_64' is supported on OpenBSD"
         INCDIR=/usr/include
-        SRCS_MACH="machine/_types.h machine/cdefs.h machine/endian.h \
-            machine/limits.h"
-        SRCS_SYS="sys/_null.h sys/stdint.h sys/_types.h sys/cdefs.h \
-            sys/endian.h"
-        SRCS_X86="amd64/_float.h amd64/stdarg.h amd64/endian.h \
-            amd64/_types.h amd64/limits.h"
-        SRCS="float.h stddef.h stdint.h stdbool.h stdarg.h"
+        SRCS_MACH="machine/cdefs.h machine/_types.h"
+        SRCS_SYS="sys/cdefs.h sys/_null.h sys/_types.h"
+        SRCS_X86=""
+        SRCS="stdarg.h stdbool.h stddef.h stdint.h"
 
 
         mkdir -p ${HOST_INCDIR}
@@ -148,7 +145,8 @@ case $(uname -s) in
         for f in ${SRCS_X86}; do cp -f ${INCDIR}/$f ${HOST_INCDIR}/x86; done
         for f in ${SRCS}; do cp -f ${INCDIR}/$f ${HOST_INCDIR}; done
 
-        HOST_CFLAGS="-fPIC -nostdlibinc"
+        HOST_CFLAGS="-fno-stack-protector -nostdlibinc"
+        HOST_LDFLAGS="-nopie"
         BUILD_UKVM="no"
         BUILD_VIRTIO="yes"
         BUILD_MUEN="no"
@@ -164,6 +162,7 @@ BUILD_UKVM=${BUILD_UKVM}
 BUILD_VIRTIO=${BUILD_VIRTIO}
 BUILD_MUEN=${BUILD_MUEN}
 HOST_CFLAGS=${HOST_CFLAGS}
+HOST_LDFLAGS=${HOST_LDFLAGS}
 TARGET_ARCH=${TARGET_ARCH}
 CC=${CC}
 EOM
