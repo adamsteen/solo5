@@ -135,8 +135,7 @@ case $(uname -s) in
         SRCS_MACH="machine/cdefs.h machine/_types.h"
         SRCS_SYS="sys/cdefs.h sys/_null.h sys/_types.h"
         SRCS_X86=""
-        SRCS="stdarg.h stdbool.h stddef.h stdint.h"
-
+        SRCS="stdbool.h stddef.h stdint.h stdarg.h"
 
         mkdir -p ${HOST_INCDIR}
         mkdir -p ${HOST_INCDIR}/machine ${HOST_INCDIR}/sys ${HOST_INCDIR}/x86
@@ -145,7 +144,7 @@ case $(uname -s) in
         for f in ${SRCS_X86}; do cp -f ${INCDIR}/$f ${HOST_INCDIR}/x86; done
         for f in ${SRCS}; do cp -f ${INCDIR}/$f ${HOST_INCDIR}; done
 
-        HOST_CFLAGS="-fno-stack-protector -nostdlibinc"
+        HOST_CFLAGS="-fno-pie -fno-stack-protector -nostdlibinc"
         HOST_LDFLAGS="-nopie"
         BUILD_UKVM="no"
         BUILD_VIRTIO="yes"
