@@ -27,7 +27,11 @@
 
 #define _GNU_SOURCE
 #include <err.h>
-#include <elf.h>
+#if defined(__OpenBSD__)
+    #include <elf_abi.h>
+#else
+    #include <elf.h>
+#endif
 #include <errno.h>
 #include <fcntl.h>
 #include <limits.h>
@@ -128,7 +132,7 @@ void ukvm_elf_load(const char *file, uint8_t *mem, size_t mem_size,
             || hdr.e_ident[EI_MAG3] != ELFMAG3
             || hdr.e_ident[EI_CLASS] != ELFCLASS64
             || hdr.e_type != ET_EXEC
-            || hdr.e_machine != EM_X86_64)
+            || hdr.e_machine != EM_AMD64)
         goto out_invalid;
 
     ph_off = hdr.e_phoff;

@@ -135,7 +135,7 @@ case $(uname -s) in
             cp -R ${CC_INCDIR}/. ${HOST_INCDIR}
 
             HOST_CFLAGS="-nostdinc"
-            BUILD_UKVM="no"
+            BUILD_UKVM="yes"
             BUILD_VIRTIO="yes"
             BUILD_MUEN="yes"
         else
@@ -160,9 +160,9 @@ case $(uname -s) in
         
             HOST_CFLAGS="-fno-pie -fno-stack-protector -nostdlibinc"		
             HOST_LDFLAGS="-nopie"		
-            BUILD_UKVM="no"		
+            BUILD_UKVM="yes"		
             BUILD_VIRTIO="yes"		
-            BUILD_MUEN="no"		
+            BUILD_MUEN="yes"		
         fi
         ;;
     *)

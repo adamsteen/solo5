@@ -57,6 +57,10 @@
 
 #include "ukvm_gdb_freebsd_x86_64.c"
 
+#elif defined(__OpenBSD__) && defined(__x86_64__)
+
+#include "ukvm_gdb_openbsd_x86_64.c"
+
 #else
 
 #error Unsupported target
