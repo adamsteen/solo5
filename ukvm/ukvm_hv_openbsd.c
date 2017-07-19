@@ -184,11 +184,10 @@ struct ukvm_hv *ukvm_hv_init(size_t mem_size)
 
     vcp = &hvb->vcp;
 	vcp->vcp_ncpus = 1;
-    vcp->vcp_ndisks = 0;
-    vcp->vcp_nnics = 0;
     strlcpy(vcp->vcp_name, "ukvm", VMM_MAX_NAME_LEN);
     
-    create_memory_map(mem_size, vcp);
+    // comment here about mem_size
+    create_memory_map(mem_size / (1024*1024), vcp);
 	ret = alloc_guest_mem(vcp);
 	if (ret) {
 		err(ret, "could not allocate guest memory - exiting");
