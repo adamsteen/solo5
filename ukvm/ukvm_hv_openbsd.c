@@ -186,7 +186,7 @@ struct ukvm_hv *ukvm_hv_init(size_t mem_size)
 	vcp->vcp_ncpus = 1;
     strlcpy(vcp->vcp_name, "ukvm", VMM_MAX_NAME_LEN);
     
-    // comment here about mem_size
+    // need to create the memory map in megabytes 
     create_memory_map(mem_size / (1024*1024), vcp);
 	ret = alloc_guest_mem(vcp);
 	if (ret) {
