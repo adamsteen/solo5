@@ -167,20 +167,29 @@ void ukvm_hv_vcpu_init(struct ukvm_hv *hv, ukvm_gpa_t gpa_ep,
     struct ukvm_hvb         *hvb = hv->b;
     struct vm_create_params	*vcp = &hvb->vcp;
 
+    ukvm_x86_setup_gdt(hv->mem);
+    ukvm_x86_setup_pagetables(hv->mem, hv->mem_size);
+
     /*
      * Set up default "flat 32 bit" register state - RIP,
      * RSP, and GDT info will be set in bootloader
      */
     memcpy(&vrs, &vcpu_init_flat32, sizeof(vrs));
 
-	vrp = calloc(1, sizeof(struct vm_run_params));
+    struct ukvm_boot_info *bi =
+        (struct ukvm_boot_info *)(hv->mem + X86_BOOT_INFO_BASE);
+    bi->mem_size = hv->mem_size;
+    bi->kernel_end = gpa_kend;
+    bi->cmdline = X86_CMDLINE_BASE;
+
+	vrp = malloc(sizeof(struct vm_run_params));
 	if (vrp == NULL)
         err(1, "calloc vrp");
 
-    /*
-     * TODO is this needed
-    vrp->vrp_exit = calloc(1, sizeof(union vm_exit));
-    */
+    vrp->vrp_exit = malloc(sizeof(union vm_exit));
+	if (vrp == NULL)
+        err(1, "calloc vrp_exit");
+
 
     vrp->vrp_vm_id = vcp->vcp_id;
     vrp->vrp_vcpu_id = 1;
@@ -188,7 +197,9 @@ void ukvm_hv_vcpu_init(struct ukvm_hv *hv, ukvm_gpa_t gpa_ep,
     if (vcpu_reset(hvb->vmd_fd, vcp->vcp_id, 1, &vrs))
         err(1, "Cannot reset VCPU - exiting.");
 
+    *cmdline = (char *)(hv->mem + X86_CMDLINE_BASE);
 }
+
 void ukvm_hv_vcpu_loop(struct ukvm_hv *hv) {
     struct ukvm_hvb *hvb = hv->b;
 
