@@ -85,9 +85,10 @@ static const struct vcpu_reg_state vcpu_init_flat32 = {
 
 
 struct ukvm_hvb {
-	int                     vmd_fd;
-    struct vm_create_params	vcp; // TODO is this required?
-	struct vm_run_params    vrp;
+	int      vmd_fd;
+    uint32_t vcp_id;
+    //struct vm_create_params	vcp;
+	//struct vm_run_params    vrp;
 };
 
 #endif /* UKVM_HV_OPENBSD_H */

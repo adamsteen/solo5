@@ -67,7 +67,7 @@ struct ukvm_hv *ukvm_hv_init(size_t mem_size)
     if (hvb->vmd_fd == -1)
         err(1, "VMM_NODE");
 
-    vcp = &hvb->vcp;
+    vcp = calloc(1, sizeof (struct vm_create_params));
 	vcp->vcp_ncpus = 1;
     strlcpy(vcp->vcp_name, "ukvm", VMM_MAX_NAME_LEN);
     
@@ -87,6 +87,8 @@ struct ukvm_hv *ukvm_hv_init(size_t mem_size)
 
     if (ioctl(hvb->vmd_fd, VMM_IOC_CREATE, vcp) < 0)
 		err(errno, "create vmm ioctl failed - exiting");
+
+    hvb->vcp_id = vcp->vcp_id;
 
     return hv;
 }

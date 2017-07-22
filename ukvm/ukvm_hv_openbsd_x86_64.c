@@ -43,10 +43,21 @@
 #include "ukvm_hv_openbsd.h"
 #include "ukvm_cpu_x86_64.h"
 
+static void vmm_set_sreg(struct vcpu_segment_info *, const struct x86_sreg *);
 int vcpu_exit(uint8_t *, struct vm_run_params *);
 int vcpu_reset(int vmd_fd, uint32_t, uint32_t, struct vcpu_reg_state *);
 void vcpu_exit_inout(struct vm_run_params *);
 
+/*
+ * vmm_set_sreg
+ *
+ */
+static void vmm_set_sreg(struct vcpu_segment_info *vsi, const struct x86_sreg *xs) {
+    vsi->vsi_sel = xs->selector;
+    vsi->vsi_limit = xs->limit;
+    // vsi->ar = // TODO what here
+    vsi->vsi_base = xs->base;
+}
 /*
  * vcpu_exit
  *
@@ -157,30 +168,60 @@ vcpu_reset(int vmd_fd, uint32_t vmid, uint32_t vcpu_id, struct vcpu_reg_state *v
 void
 vcpu_exit_inout(struct vm_run_params *vrp)
 {
+    warnx("vcpu_exit_inout: %u", vrp->vrp_exit_reason);
 }
 
 void ukvm_hv_vcpu_init(struct ukvm_hv *hv, ukvm_gpa_t gpa_ep,
         ukvm_gpa_t gpa_kend, char **cmdline)
 {
 	struct vcpu_reg_state	 vrs;
-	struct vm_run_params    *vrp;
     struct ukvm_hvb         *hvb = hv->b;
-    struct vm_create_params	*vcp = &hvb->vcp;
 
     ukvm_x86_setup_gdt(hv->mem);
     ukvm_x86_setup_pagetables(hv->mem, hv->mem_size);
 
-    /*
-     * Set up default "flat 32 bit" register state - RIP,
-     * RSP, and GDT info will be set in bootloader
-     */
     memcpy(&vrs, &vcpu_init_flat32, sizeof(vrs));
+    vrs.vrs_gprs[VCPU_REGS_CR0] = X86_CR0_INIT;
+    vrs.vrs_gprs[VCPU_REGS_CR3] = X86_CR3_INIT;
+    vrs.vrs_gprs[VCPU_REGS_CR4] = X86_CR4_INIT;
+    vrs.vrs_gprs[VCPU_REGS_RFLAGS] = X86_RFLAGS_INIT;
+    vrs.vrs_gprs[VCPU_REGS_RIP] = gpa_ep;
+    vrs.vrs_gprs[VCPU_REGS_RSP] = hv->mem_size - 8;
+    vrs.vrs_gprs[VCPU_REGS_RDI] = X86_BOOT_INFO_BASE;
+
+    vrs.vrs_msrs[VCPU_REGS_EFER] = X86_EFER_INIT;
+
+    vmm_set_sreg(&vrs.vrs_sregs[VCPU_REGS_CS], &ukvm_x86_sreg_code);
+    vmm_set_sreg(&vrs.vrs_sregs[VCPU_REGS_CS], &ukvm_x86_sreg_code);
+    vmm_set_sreg(&vrs.vrs_sregs[VCPU_REGS_DS], &ukvm_x86_sreg_data);
+    vmm_set_sreg(&vrs.vrs_sregs[VCPU_REGS_ES], &ukvm_x86_sreg_data);
+    vmm_set_sreg(&vrs.vrs_sregs[VCPU_REGS_FS], &ukvm_x86_sreg_data);
+    vmm_set_sreg(&vrs.vrs_sregs[VCPU_REGS_GS], &ukvm_x86_sreg_data);
+    vmm_set_sreg(&vrs.vrs_sregs[VCPU_REGS_SS], &ukvm_x86_sreg_data);
+    vmm_set_sreg(&vrs.vrs_sregs[VCPU_REGS_LDTR], &ukvm_x86_sreg_unusable);
+    vmm_set_sreg(&vrs.vrs_sregs[VCPU_REGS_TR], &ukvm_x86_sreg_tr);
+
+    vrs.vrs_gdtr.vsi_limit = X86_GDTR_LIMIT;
+    vrs.vrs_gdtr.vsi_base = X86_GDT_BASE;
 
     struct ukvm_boot_info *bi =
         (struct ukvm_boot_info *)(hv->mem + X86_BOOT_INFO_BASE);
     bi->mem_size = hv->mem_size;
     bi->kernel_end = gpa_kend;
     bi->cmdline = X86_CMDLINE_BASE;
+
+    if (vcpu_reset(hvb->vmd_fd, hvb->vcp_id, 0, &vrs))
+        err(1, "Cannot reset VCPU - exiting.");
+
+    *cmdline = (char *)(hv->mem + X86_CMDLINE_BASE);
+}
+
+void ukvm_hv_vcpu_loop(struct ukvm_hv *hv) {
+    
+    struct ukvm_hvb         *hvb = hv->b;
+	struct vm_run_params    *vrp;
+    uint8_t vcpu_hlt;
+	intptr_t ret = 0;
 
 	vrp = malloc(sizeof(struct vm_run_params));
 	if (vrp == NULL)
@@ -191,24 +232,11 @@ void ukvm_hv_vcpu_init(struct ukvm_hv *hv, ukvm_gpa_t gpa_ep,
         err(1, "calloc vrp_exit");
 
 
-    vrp->vrp_vm_id = vcp->vcp_id;
-    vrp->vrp_vcpu_id = 1;
-
-    if (vcpu_reset(hvb->vmd_fd, vcp->vcp_id, 1, &vrs))
-        err(1, "Cannot reset VCPU - exiting.");
-
-    *cmdline = (char *)(hv->mem + X86_CMDLINE_BASE);
-}
-
-void ukvm_hv_vcpu_loop(struct ukvm_hv *hv) {
-    struct ukvm_hvb *hvb = hv->b;
-
-	struct vm_run_params *vrp = &hvb->vrp;
-    uint8_t vcpu_hlt;
-	intptr_t ret = 0;
-
+    vrp->vrp_vm_id = hvb->vcp_id; //TODO is this correct
+    vrp->vrp_vcpu_id = 0;
 	vrp->vrp_continue = 0;
 
+    warnx("vrp_vm_id: %u", vrp->vrp_vm_id);
 	for (;;) {
         
         vrp->vrp_irq = 0xFFFF;
