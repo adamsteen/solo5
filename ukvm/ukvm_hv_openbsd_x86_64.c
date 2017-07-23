@@ -129,7 +129,6 @@ void ukvm_hv_vcpu_loop(struct ukvm_hv *hv) {
 	if (vrp == NULL)
         err(1, "calloc vrp_exit");
 
-
     vrp->vrp_vm_id = hvb->vcp_id;
     vrp->vrp_vcpu_id = hvb->vcpu_id;
 	vrp->vrp_continue = 0;
@@ -147,6 +146,8 @@ void ukvm_hv_vcpu_loop(struct ukvm_hv *hv) {
 		if (vrp->vrp_exit_reason == VM_EXIT_TERMINATED) {
             return;
 		}
+        
+        union vm_exit *vei = vrp->vrp_exit;
 
 		if (vrp->vrp_exit_reason != VM_EXIT_NONE) {
             switch (vrp->vrp_exit_reason) {
@@ -162,7 +163,20 @@ void ukvm_hv_vcpu_loop(struct ukvm_hv *hv) {
                 break;
             case VMX_EXIT_IO:
             case SVM_VMEXIT_IOIO:
-                err(1, "NOT YET IMPLEMENTED - EXIT_IO: %u", vrp->vrp_exit_reason);
+                if (vei->vei.vei_dir != VEI_DIR_OUT
+                        || vei->vei.vei_size != 4)
+                    errx(1, "Invalid guest port access: port=0x%x", vei->vei.vei_port);
+                if (vei->vei.vei_port < UKVM_HYPERCALL_PIO_BASE ||
+                        vei->vei.vei_port >= (UKVM_HYPERCALL_PIO_BASE + UKVM_HYPERCALL_MAX))
+                    errx(1, "Invalid guest port access: port=0x%x", vei->vei.vei_port);
+
+                int nr = vei->vei.vei_port - UKVM_HYPERCALL_PIO_BASE;
+                ukvm_hypercall_fn_t fn = ukvm_core_hypercalls[nr];
+                if (fn == NULL)
+                    errx(1, "Invalid guest hypercall: num=%d", nr);
+
+                ukvm_gpa_t gpa = vei->vei.vei_data; // TODO is this correct?
+                fn(hv, gpa);
                 break;
             case VMX_EXIT_HLT:
             case SVM_VMEXIT_HLT:
