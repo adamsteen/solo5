@@ -42,6 +42,7 @@
 /*
  * usr.sbin/vmd/vm.c
  */
+
 /*
  * Represents a standard register set for an OS to be booted
  * as a flat 32 bit address space, before paging is enabled.
@@ -82,13 +83,9 @@ static const struct vcpu_reg_state vcpu_init_flat32 = {
 	.vrs_crs[VCPU_REGS_XCR0] = XCR0_X87
 };
 
-
-
 struct ukvm_hvb {
 	int      vmd_fd;
     uint32_t vcp_id;
-    //struct vm_create_params	vcp;
-	//struct vm_run_params    vrp;
 };
 
 #endif /* UKVM_HV_OPENBSD_H */
