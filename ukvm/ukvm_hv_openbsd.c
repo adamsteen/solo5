@@ -89,6 +89,7 @@ struct ukvm_hv *ukvm_hv_init(size_t mem_size)
 		err(errno, "create vmm ioctl failed - exiting");
 
     hvb->vcp_id = vcp->vcp_id;
+    hvb->vcpu_id = 0;
 
     return hv;
 }

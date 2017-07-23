@@ -37,179 +37,71 @@
 #include <sys/types.h>
 #include <sys/sysctl.h>
 #include <machine/vmmvar.h>
+#include <machine/specialreg.h>
 #include <sys/param.h>
 
 #include "ukvm.h"
 #include "ukvm_hv_openbsd.h"
 #include "ukvm_cpu_x86_64.h"
 
-static void vmm_set_sreg(struct vcpu_segment_info *, const struct x86_sreg *);
-int vcpu_exit(uint8_t *, struct vm_run_params *);
-int vcpu_reset(int vmd_fd, uint32_t, uint32_t, struct vcpu_reg_state *);
-void vcpu_exit_inout(struct vm_run_params *);
+static struct vcpu_segment_info sreg_to_vsi(const struct x86_sreg *);
 
-/*
- * vmm_set_sreg
- *
- */
-static void vmm_set_sreg(struct vcpu_segment_info *vsi, const struct x86_sreg *sreg) {
-    vsi->vsi_sel = sreg->selector * 8;
-    vsi->vsi_limit = sreg->limit;
-    vsi->vsi_ar = (sreg->type
+static struct vcpu_segment_info sreg_to_vsi(const struct x86_sreg *sreg)
+{
+    struct vcpu_segment_info vsi = {
+        .vsi_sel = sreg->selector * 8,
+        .vsi_limit = sreg->limit,
+        .vsi_ar = (sreg->type
             | (sreg->s << 4)
             | (sreg->dpl << 5)
             | (sreg->p << 7)
             | (sreg->l << 13)
             | (sreg->db << 14)
             | (sreg->g << 15)
-            | (sreg->unusable << X86_SREG_UNUSABLE_BIT));
-    vsi->vsi_base = sreg->base;
-}
-/*
- * vcpu_exit
- *
- * Handle a vcpu exit. This function is called when it is determined that
- * vmm(4) requires the assistance of vmd to support a particular guest
- * exit type (eg, accessing an I/O port or device). Guest state is contained
- * in 'vrp', and will be resent to vmm(4) on exit completion.
- *
- * Upon conclusion of handling the exit, the function determines if any
- * interrupts should be injected into the guest, and asserts the proper
- * IRQ line whose interrupt should be vectored.
- *
- * Parameters:
- *  vrp: vcpu run parameters containing guest state for this exit
- *
- * Return values:
- *  0: the exit was handled successfully
- *  1: an error occurred (eg, unknown exit reason passed in 'vrp')
- */
-int
-vcpu_exit(uint8_t *vcpu_hlt, struct vm_run_params *vrp)
-{
-	switch (vrp->vrp_exit_reason) {
-	case VMX_EXIT_INT_WINDOW:
-	case SVM_VMEXIT_VINTR:
-	case VMX_EXIT_CPUID:
-	case VMX_EXIT_EXTINT:
-	case SVM_VMEXIT_INTR:
-	case VMX_EXIT_EPT_VIOLATION:
-	case SVM_VMEXIT_NPF:
-	case SVM_VMEXIT_MSR:
-	case SVM_VMEXIT_CPUID:
-		/*
-		 * We may be exiting to vmd to handle a pending interrupt but
-		 * at the same time the last exit type may have been one of
-		 * these. In this case, there's nothing extra to be done
-		 * here (and falling through to the default case below results
-		 * in more vmd log spam).
-		 */
-		break;
-	case VMX_EXIT_IO:
-	case SVM_VMEXIT_IOIO:
-		vcpu_exit_inout(vrp);
-		break;
-	case VMX_EXIT_HLT:
-	case SVM_VMEXIT_HLT:
-		*vcpu_hlt = 1;
-		break;
-	case VMX_EXIT_TRIPLE_FAULT:
-	case SVM_VMEXIT_SHUTDOWN:
-		/* reset VM */
-		return (EAGAIN);
-	default:
-		err(1, "unknown exit reason");
-	}
-
-	/* Process any pending traffic
-     * TODO is this needed?
-	vionet_process_rx(vrp->vrp_vm_id);
-     * */
-
-	vrp->vrp_continue = 1;
-
-	return (0);
-}
-
-/*
- * vcpu_reset
- *
- * Requests vmm(4) to reset the VCPUs in the indicated VM to
- * the register state provided
- *
- * Parameters
- *  vmid: VM ID to reset
- *  vcpu_id: VCPU ID to reset
- *  vrs: the register state to initialize
- *
- * Return values:
- *  0: success
- *  !0 : ioctl to vmm(4) failed (eg, ENOENT if the supplied VM ID is not
- *      valid)
- */
-int
-vcpu_reset(int vmd_fd, uint32_t vmid, uint32_t vcpu_id, struct vcpu_reg_state *vrs)
-{
-	struct vm_resetcpu_params vrp;
-
-	memset(&vrp, 0, sizeof(vrp));
-	vrp.vrp_vm_id = vmid;
-	vrp.vrp_vcpu_id = vcpu_id;
-	memcpy(&vrp.vrp_init_state, vrs, sizeof(struct vcpu_reg_state));
-
-	if (ioctl(vmd_fd, VMM_IOC_RESETCPU, &vrp) < 0)
-		return (errno);
-
-	return (0);
-}
-
-/*
- * vcpu_exit_inout
- *
- * Handle all I/O exits that need to be emulated in vmd. This includes the
- * i8253 PIT, the com1 ns8250 UART, and the MC146818 RTC/NVRAM device.
- *
- * Parameters:
- *  vrp: vcpu run parameters containing guest state for this exit
- */
-void
-vcpu_exit_inout(struct vm_run_params *vrp)
-{
-    err(1, "NOT YET IMPLEMENTED - vcpu_exit_inout: %u", vrp->vrp_exit_reason);
+            | (sreg->unusable << X86_SREG_UNUSABLE_BIT)),
+        .vsi_base = sreg->base
+    };
+    return vsi;
 }
 
 void ukvm_hv_vcpu_init(struct ukvm_hv *hv, ukvm_gpa_t gpa_ep,
         ukvm_gpa_t gpa_kend, char **cmdline)
 {
-    struct vcpu_reg_state	vrs;
-    struct ukvm_hvb         *hvb = hv->b;
+    struct ukvm_hvb *hvb = hv->b;
+
+	struct vm_resetcpu_params vrp = {
+        .vrp_vm_id = hvb->vcp_id,
+        .vrp_vcpu_id = hvb->vcpu_id,
+        .vrp_init_state = {
+            .vrs_gprs[VCPU_REGS_RFLAGS] = X86_RFLAGS_INIT,
+            .vrs_gprs[VCPU_REGS_RIP] = gpa_ep,
+            .vrs_gprs[VCPU_REGS_RSP] = hv->mem_size - 8,
+            .vrs_gprs[VCPU_REGS_RDI] = X86_BOOT_INFO_BASE,
+            .vrs_crs[VCPU_REGS_CR0] = X86_CR0_INIT,
+            .vrs_crs[VCPU_REGS_CR3] = X86_CR3_INIT,
+            .vrs_crs[VCPU_REGS_CR4] = X86_CR4_INIT,
+            .vrs_sregs[VCPU_REGS_CS] = sreg_to_vsi(&ukvm_x86_sreg_code),
+            .vrs_sregs[VCPU_REGS_DS] = sreg_to_vsi(&ukvm_x86_sreg_data),
+            .vrs_sregs[VCPU_REGS_ES] = sreg_to_vsi(&ukvm_x86_sreg_data),
+            .vrs_sregs[VCPU_REGS_FS] = sreg_to_vsi(&ukvm_x86_sreg_data),
+            .vrs_sregs[VCPU_REGS_GS] = sreg_to_vsi(&ukvm_x86_sreg_data),
+            .vrs_sregs[VCPU_REGS_SS] = sreg_to_vsi(&ukvm_x86_sreg_data),
+            .vrs_gdtr = { 0x0, X86_GDTR_LIMIT, 0x0, X86_GDT_BASE},
+            .vrs_idtr = { 0x0, 0xFFFF, 0x0, 0x0},
+            .vrs_sregs[VCPU_REGS_LDTR] = sreg_to_vsi(&ukvm_x86_sreg_unusable),
+            .vrs_sregs[VCPU_REGS_TR] = sreg_to_vsi(&ukvm_x86_sreg_tr),
+            .vrs_msrs[VCPU_REGS_EFER] = X86_EFER_INIT, //0ULL,
+            .vrs_msrs[VCPU_REGS_STAR] = 0ULL,
+            .vrs_msrs[VCPU_REGS_LSTAR] = 0ULL,
+            .vrs_msrs[VCPU_REGS_CSTAR] = 0ULL,
+            .vrs_msrs[VCPU_REGS_SFMASK] = 0ULL,
+            .vrs_msrs[VCPU_REGS_KGSBASE] = 0ULL,
+            .vrs_crs[VCPU_REGS_XCR0] = XCR0_X87
+        }
+    };
 
     ukvm_x86_setup_gdt(hv->mem);
     ukvm_x86_setup_pagetables(hv->mem, hv->mem_size);
-
-    memcpy(&vrs, &vcpu_init_flat32, sizeof(vrs));
-    vrs.vrs_crs[VCPU_REGS_CR0] = X86_CR0_INIT;
-    vrs.vrs_crs[VCPU_REGS_CR3] = X86_CR3_INIT;
-    vrs.vrs_crs[VCPU_REGS_CR4] = X86_CR4_INIT;
-    vrs.vrs_msrs[VCPU_REGS_EFER] = X86_EFER_INIT;
-
-    vmm_set_sreg(&vrs.vrs_sregs[VCPU_REGS_CS], &ukvm_x86_sreg_code);
-    vmm_set_sreg(&vrs.vrs_sregs[VCPU_REGS_SS], &ukvm_x86_sreg_data);
-    vmm_set_sreg(&vrs.vrs_sregs[VCPU_REGS_DS], &ukvm_x86_sreg_data);
-    vmm_set_sreg(&vrs.vrs_sregs[VCPU_REGS_ES], &ukvm_x86_sreg_data);
-    vmm_set_sreg(&vrs.vrs_sregs[VCPU_REGS_FS], &ukvm_x86_sreg_data);
-    vmm_set_sreg(&vrs.vrs_sregs[VCPU_REGS_GS], &ukvm_x86_sreg_data);
-
-    vrs.vrs_gdtr.vsi_limit = X86_GDTR_LIMIT;
-    vrs.vrs_gdtr.vsi_base = X86_GDT_BASE;
-    
-    vmm_set_sreg(&vrs.vrs_sregs[VCPU_REGS_LDTR], &ukvm_x86_sreg_unusable);
-    vmm_set_sreg(&vrs.vrs_sregs[VCPU_REGS_TR], &ukvm_x86_sreg_tr);
-
-    vrs.vrs_gprs[VCPU_REGS_RIP] = gpa_ep;
-    vrs.vrs_gprs[VCPU_REGS_RFLAGS] = X86_RFLAGS_INIT;
-    vrs.vrs_gprs[VCPU_REGS_RSP] = hv->mem_size - 8;
-    vrs.vrs_gprs[VCPU_REGS_RDI] = X86_BOOT_INFO_BASE;
 
     struct ukvm_boot_info *bi =
         (struct ukvm_boot_info *)(hv->mem + X86_BOOT_INFO_BASE);
@@ -217,7 +109,7 @@ void ukvm_hv_vcpu_init(struct ukvm_hv *hv, ukvm_gpa_t gpa_ep,
     bi->kernel_end = gpa_kend;
     bi->cmdline = X86_CMDLINE_BASE;
 
-    if (vcpu_reset(hvb->vmd_fd, hvb->vcp_id, 0, &vrs))
+	if (ioctl(hvb->vmd_fd, VMM_IOC_RESETCPU, &vrp) < 0)
         err(1, "Cannot reset VCPU - exiting.");
 
     *cmdline = (char *)(hv->mem + X86_CMDLINE_BASE);
@@ -227,8 +119,7 @@ void ukvm_hv_vcpu_loop(struct ukvm_hv *hv) {
     
     struct ukvm_hvb         *hvb = hv->b;
 	struct vm_run_params    *vrp;
-    uint8_t vcpu_hlt;
-	intptr_t ret = 0;
+    uint8_t vcpu_hlt; // TODO do something when we halt
 
 	vrp = malloc(sizeof(struct vm_run_params));
 	if (vrp == NULL)
@@ -240,11 +131,10 @@ void ukvm_hv_vcpu_loop(struct ukvm_hv *hv) {
 
 
     vrp->vrp_vm_id = hvb->vcp_id;
-    vrp->vrp_vcpu_id = 0;
+    vrp->vrp_vcpu_id = hvb->vcpu_id;
 	vrp->vrp_continue = 0;
 
 	for (;;) {
-        
         warnx("before VMM_IOC_RUN");
         vrp->vrp_irq = 0xFFFF;
 		if (ioctl(hvb->vmd_fd, VMM_IOC_RUN, vrp) < 0) {
@@ -259,13 +149,34 @@ void ukvm_hv_vcpu_loop(struct ukvm_hv *hv) {
 		}
 
 		if (vrp->vrp_exit_reason != VM_EXIT_NONE) {
-			/*
-			 * vmm(4) needs help handling an exit, handle in
-			 * vcpu_exit.
-			 */
-			ret = vcpu_exit(&vcpu_hlt, vrp);
-			if (ret)
-				break;
+            switch (vrp->vrp_exit_reason) {
+            case VMX_EXIT_INT_WINDOW:
+            case VMX_EXIT_CPUID:
+            case VMX_EXIT_EXTINT:
+            case SVM_VMEXIT_INTR:
+            case VMX_EXIT_EPT_VIOLATION:
+            case SVM_VMEXIT_NPF:
+            case SVM_VMEXIT_MSR:
+            case SVM_VMEXIT_CPUID:
+                // nothing to be done here, as per vmd
+                break;
+            case VMX_EXIT_IO:
+            case SVM_VMEXIT_IOIO:
+                err(1, "NOT YET IMPLEMENTED - EXIT_IO: %u", vrp->vrp_exit_reason);
+                break;
+            case VMX_EXIT_HLT:
+            case SVM_VMEXIT_HLT:
+                vcpu_hlt = 1;
+                break;
+            case VMX_EXIT_TRIPLE_FAULT:
+            case SVM_VMEXIT_SHUTDOWN:
+                /* reset VM */
+                err(1, "Triple Fault");
+            default:
+                err(1, "unknown exit reason");
+            }
+
+            vrp->vrp_continue = 1;
 		}
 	}
 }
