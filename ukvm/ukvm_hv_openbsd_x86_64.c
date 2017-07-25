@@ -39,13 +39,54 @@
 #include <machine/vmmvar.h>
 #include <machine/specialreg.h>
 #include <sys/param.h>
+#include <unistd.h>
+#include <sys/time.h>
 
 #include "ukvm.h"
 #include "ukvm_hv_openbsd.h"
 #include "ukvm_cpu_x86_64.h"
 
+uint64_t rdtsc();
+uint64_t rdtscp();
+uint64_t get_tsc_freq();
 static struct vcpu_segment_info sreg_to_vsi(const struct x86_sreg *);
 
+uint64_t rdtscp()
+{
+    uint32_t lo, hi;
+     __asm__ __volatile__ ("RDTSCP\n\t"
+                           "mov %%edx, %0\n\t"
+                           "mov %%eax, %1\n\t"
+                           "CPUID\n\t": "=r" (hi), "=r" (lo):: "%rax", "%rbx", "%rcx", "%rdx");
+    return (uint64_t)hi << 32 | lo;
+}
+
+uint64_t rdtsc()
+{
+    uint32_t lo, hi;
+     __asm__ __volatile__ ("CPUID\n\t"
+                           "RDTSC\n\t"
+                           "mov %%edx, %0\n\t"
+                           "mov %%eax, %1\n\t": "=r" (hi), "=r" (lo)::
+                           "%rax", "%rbx", "%rcx", "%rdx");;
+    return (uint64_t)hi << 32 | lo;
+}
+
+uint64_t get_tsc_freq() {
+    useconds_t usec = 500000;
+    uint64_t start_timestamp, end_timestamp;
+    struct timeval tv_start, tv_end;
+
+    gettimeofday(&tv_start, NULL);
+    start_timestamp = rdtsc();
+    usleep(usec);
+    end_timestamp = rdtscp();
+    gettimeofday(&tv_end, NULL);
+
+    uint64_t cycles = end_timestamp - start_timestamp;
+    useconds_t time = (tv_end.tv_sec - tv_start.tv_sec) * 1000000 + tv_end.tv_usec - tv_start.tv_usec;
+    return cycles * 1000 / time;
+}
 static struct vcpu_segment_info sreg_to_vsi(const struct x86_sreg *sreg)
 {
     struct vcpu_segment_info vsi = {
@@ -73,10 +114,10 @@ void ukvm_hv_vcpu_init(struct ukvm_hv *hv, ukvm_gpa_t gpa_ep,
         .vrp_vm_id = hvb->vcp_id,
         .vrp_vcpu_id = hvb->vcpu_id,
         .vrp_init_state = {
-            .vrs_gprs[VCPU_REGS_RFLAGS] = X86_RFLAGS_INIT,
-            .vrs_gprs[VCPU_REGS_RIP] = gpa_ep,
-            .vrs_gprs[VCPU_REGS_RSP] = hv->mem_size - 8,
-            .vrs_gprs[VCPU_REGS_RDI] = X86_BOOT_INFO_BASE,
+            .vrs_gprs[VCPU_REGS_RFLAGS] = X86_RFLAGS_INIT, // as per openbsd
+            .vrs_gprs[VCPU_REGS_RIP] = gpa_ep, // check
+            .vrs_gprs[VCPU_REGS_RSP] = hv->mem_size - 8, // check
+            .vrs_gprs[VCPU_REGS_RDI] = X86_BOOT_INFO_BASE, //check
             .vrs_crs[VCPU_REGS_CR0] = X86_CR0_INIT,
             .vrs_crs[VCPU_REGS_CR3] = X86_CR3_INIT,
             .vrs_crs[VCPU_REGS_CR4] = X86_CR4_INIT,
@@ -90,7 +131,7 @@ void ukvm_hv_vcpu_init(struct ukvm_hv *hv, ukvm_gpa_t gpa_ep,
             .vrs_idtr = { 0x0, 0xFFFF, 0x0, 0x0},
             .vrs_sregs[VCPU_REGS_LDTR] = sreg_to_vsi(&ukvm_x86_sreg_unusable),
             .vrs_sregs[VCPU_REGS_TR] = sreg_to_vsi(&ukvm_x86_sreg_tr),
-            .vrs_msrs[VCPU_REGS_EFER] = X86_EFER_INIT, //0ULL,
+            .vrs_msrs[VCPU_REGS_EFER] = X86_EFER_LME,
             .vrs_msrs[VCPU_REGS_STAR] = 0ULL,
             .vrs_msrs[VCPU_REGS_LSTAR] = 0ULL,
             .vrs_msrs[VCPU_REGS_CSTAR] = 0ULL,
@@ -107,7 +148,8 @@ void ukvm_hv_vcpu_init(struct ukvm_hv *hv, ukvm_gpa_t gpa_ep,
         (struct ukvm_boot_info *)(hv->mem + X86_BOOT_INFO_BASE);
     bi->mem_size = hv->mem_size;
     bi->kernel_end = gpa_kend;
-    bi->cmdline = X86_CMDLINE_BASE;
+    bi->cmdline = X86_CMDLINE_BASE; 
+    bi->cpu.tsc_freq = get_tsc_freq();
 
 	if (ioctl(hvb->vmd_fd, VMM_IOC_RESETCPU, &vrp) < 0)
         err(1, "Cannot reset VCPU - exiting.");
@@ -175,7 +217,7 @@ void ukvm_hv_vcpu_loop(struct ukvm_hv *hv) {
                 if (fn == NULL)
                     errx(1, "Invalid guest hypercall: num=%d", nr);
 
-                ukvm_gpa_t gpa = vei->vei.vei_data; // TODO is this correct?
+                ukvm_gpa_t gpa = vei->vei.vei_data;
                 fn(hv, gpa);
                 break;
             case VMX_EXIT_HLT:
