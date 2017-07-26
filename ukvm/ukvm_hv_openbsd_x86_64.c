@@ -84,8 +84,8 @@ uint64_t get_tsc_freq_mhz() {
     gettimeofday(&tv_end, NULL);
 
     uint64_t cycles = end_timestamp - start_timestamp;
-    useconds_t time = (tv_end.tv_sec - tv_start.tv_sec) * 1000000 + tv_end.tv_usec - tv_start.tv_usec;
-    return cycles * 1000 / time;
+    useconds_t time = (tv_end.tv_sec - tv_start.tv_sec) * 1000000000 + tv_end.tv_usec - tv_start.tv_usec;
+    return cycles / time;
 }
 static struct vcpu_segment_info sreg_to_vsi(const struct x86_sreg *sreg)
 {
@@ -178,54 +178,55 @@ void ukvm_hv_vcpu_loop(struct ukvm_hv *hv) {
         vrp->vrp_irq = 0xFFFF;
         if (ioctl(hvb->vmd_fd, VMM_IOC_RUN, vrp) < 0)
 			err(errno, "ukvm_hv_vcpu_loop: vm / vcpu run ioctl failed");
-        warnx("after VMM_IOC_RUN");
+
+        warnx("after VMM_IOC_RUN ioctl");
 
 		/* If the VM is terminating, exit normally */
-		if (vrp->vrp_exit_reason == VM_EXIT_TERMINATED) {
+        if (vrp->vrp_exit_reason == VM_EXIT_TERMINATED) {
             return;
-		}
-        
-       union vm_exit *vei = vrp->vrp_exit;
+        }
+
+        union vm_exit *vei = vrp->vrp_exit;
 
         if (vrp->vrp_exit_reason != VM_EXIT_NONE) {
             switch (vrp->vrp_exit_reason) {
-            case VMX_EXIT_INT_WINDOW:
-            case VMX_EXIT_CPUID:
-            case VMX_EXIT_EXTINT:
-            case SVM_VMEXIT_INTR:
-            case VMX_EXIT_EPT_VIOLATION:
-            case SVM_VMEXIT_NPF:
-            case SVM_VMEXIT_MSR:
-            case SVM_VMEXIT_CPUID:
-                // nothing to be done here, as per vmd
-                break;
-            case VMX_EXIT_IO:
-            case SVM_VMEXIT_IOIO:
-                if (vei->vei.vei_dir != VEI_DIR_OUT
-                        || vei->vei.vei_size != 4)
-                    errx(1, "Invalid guest port access: port=0x%x", vei->vei.vei_port);
-                if (vei->vei.vei_port < UKVM_HYPERCALL_PIO_BASE ||
-                        vei->vei.vei_port >= (UKVM_HYPERCALL_PIO_BASE + UKVM_HYPERCALL_MAX))
-                    errx(1, "Invalid guest port access: port=0x%x", vei->vei.vei_port);
+                case VMX_EXIT_INT_WINDOW:
+                case VMX_EXIT_CPUID:
+                case VMX_EXIT_EXTINT:
+                case SVM_VMEXIT_INTR:
+                case VMX_EXIT_EPT_VIOLATION:
+                case SVM_VMEXIT_NPF:
+                case SVM_VMEXIT_MSR:
+                case SVM_VMEXIT_CPUID:
+                    // nothing to be done here, as per vmd
+                    break;
+                case VMX_EXIT_IO:
+                case SVM_VMEXIT_IOIO:
+                    if (vei->vei.vei_dir != VEI_DIR_OUT
+                            || vei->vei.vei_size != 4)
+                        errx(1, "Invalid guest port access: port=0x%x", vei->vei.vei_port);
+                    if (vei->vei.vei_port < UKVM_HYPERCALL_PIO_BASE ||
+                            vei->vei.vei_port >= (UKVM_HYPERCALL_PIO_BASE + UKVM_HYPERCALL_MAX))
+                        errx(1, "Invalid guest port access: port=0x%x", vei->vei.vei_port);
 
-                int nr = vei->vei.vei_port - UKVM_HYPERCALL_PIO_BASE;
-                ukvm_hypercall_fn_t fn = ukvm_core_hypercalls[nr];
-                if (fn == NULL)
-                    errx(1, "Invalid guest hypercall: num=%d", nr);
+                    int nr = vei->vei.vei_port - UKVM_HYPERCALL_PIO_BASE;
+                    ukvm_hypercall_fn_t fn = ukvm_core_hypercalls[nr];
+                    if (fn == NULL)
+                        errx(1, "Invalid guest hypercall: num=%d", nr);
 
-                ukvm_gpa_t gpa = vei->vei.vei_data;
-                fn(hv, gpa);
-                break;
-            case VMX_EXIT_HLT:
-            case SVM_VMEXIT_HLT:
-                // stop on exit
-                break;
-            case VMX_EXIT_TRIPLE_FAULT:
-            case SVM_VMEXIT_SHUTDOWN:
-                /* reset VM */
-                err(1, "Triple Fault");
-            default:
-                err(1, "unknown exit reason");
+                    ukvm_gpa_t gpa = vei->vei.vei_data;
+                    fn(hv, gpa);
+                    break;
+                case VMX_EXIT_HLT:
+                case SVM_VMEXIT_HLT:
+                    // stop on exit
+                    break;
+                case VMX_EXIT_TRIPLE_FAULT:
+                case SVM_VMEXIT_SHUTDOWN:
+                    /* reset VM */
+                    err(1, "Triple Fault");
+                default:
+                    err(1, "unknown exit reason");
             }
 
             vrp->vrp_continue = 1;
