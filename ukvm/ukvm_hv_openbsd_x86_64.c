@@ -48,7 +48,7 @@
 
 uint64_t rdtsc();
 uint64_t rdtscp();
-uint64_t get_tsc_freq_mhz();
+uint64_t get_tsc_freq();
 static struct vcpu_segment_info sreg_to_vsi(const struct x86_sreg *);
 
 uint64_t rdtscp()
@@ -72,21 +72,26 @@ uint64_t rdtsc()
     return (uint64_t)hi << 32 | lo;
 }
 
-uint64_t get_tsc_freq_mhz() {
-    useconds_t usec = 500000;
+uint64_t get_tsc_freq() {
+
     uint64_t start_timestamp, end_timestamp;
     struct timeval tv_start, tv_end;
 
     gettimeofday(&tv_start, NULL);
     start_timestamp = rdtsc();
-    usleep(usec);
+    while (1) {
+        gettimeofday(&tv_end, NULL);
+        if (tv_end.tv_sec > tv_start.tv_sec + 1)
+            break;
+    }
     end_timestamp = rdtscp();
-    gettimeofday(&tv_end, NULL);
 
     uint64_t cycles = end_timestamp - start_timestamp;
-    useconds_t time = (tv_end.tv_sec - tv_start.tv_sec) * 1000000000 + tv_end.tv_usec - tv_start.tv_usec;
-    return cycles / time;
+    uint64_t usec = (tv_end.tv_sec - tv_start.tv_sec) * 1000000 + (tv_end.tv_usec - tv_start.tv_usec);
+    // convert to cycles per second
+    return 1000000 * cycles / usec;
 }
+
 static struct vcpu_segment_info sreg_to_vsi(const struct x86_sreg *sreg)
 {
     struct vcpu_segment_info vsi = {
@@ -149,7 +154,7 @@ void ukvm_hv_vcpu_init(struct ukvm_hv *hv, ukvm_gpa_t gpa_ep,
     bi->mem_size = hv->mem_size;
     bi->kernel_end = gpa_kend;
     bi->cmdline = X86_CMDLINE_BASE; 
-    bi->cpu.tsc_freq = get_tsc_freq_mhz() * 1000;
+    bi->cpu.tsc_freq = get_tsc_freq();
 
     if (ioctl(hvb->vmd_fd, VMM_IOC_RESETCPU, &vrp) < 0)
         err(1, "Cannot reset VCPU - exiting.");
