@@ -175,9 +175,6 @@ static int tap_attach(const char *ifname)
 
 #elif defined(__OpenBSD__)
 
-    /*
-     * TODO: is this correct??
-     */
     if (!up) {
         errno = ENETDOWN;
         return -1;
