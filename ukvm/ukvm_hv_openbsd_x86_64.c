@@ -48,7 +48,7 @@
 
 uint64_t rdtsc();
 uint64_t rdtscp();
-uint64_t get_tsc_freq();
+uint64_t get_tsc_freq_mhz();
 static struct vcpu_segment_info sreg_to_vsi(const struct x86_sreg *);
 
 uint64_t rdtscp()
@@ -72,7 +72,7 @@ uint64_t rdtsc()
     return (uint64_t)hi << 32 | lo;
 }
 
-uint64_t get_tsc_freq() {
+uint64_t get_tsc_freq_mhz() {
     useconds_t usec = 500000;
     uint64_t start_timestamp, end_timestamp;
     struct timeval tv_start, tv_end;
@@ -109,15 +109,15 @@ void ukvm_hv_vcpu_init(struct ukvm_hv *hv, ukvm_gpa_t gpa_ep,
         ukvm_gpa_t gpa_kend, char **cmdline)
 {
     struct ukvm_hvb *hvb = hv->b;
-
-	struct vm_resetcpu_params vrp = {
+    
+    struct vm_resetcpu_params vrp = {
         .vrp_vm_id = hvb->vcp_id,
         .vrp_vcpu_id = hvb->vcpu_id,
         .vrp_init_state = {
-            .vrs_gprs[VCPU_REGS_RFLAGS] = X86_RFLAGS_INIT, // as per openbsd
-            .vrs_gprs[VCPU_REGS_RIP] = gpa_ep, // check
-            .vrs_gprs[VCPU_REGS_RSP] = hv->mem_size - 8, // check
-            .vrs_gprs[VCPU_REGS_RDI] = X86_BOOT_INFO_BASE, //check
+            .vrs_gprs[VCPU_REGS_RFLAGS] = X86_RFLAGS_INIT,
+            .vrs_gprs[VCPU_REGS_RIP] = gpa_ep,
+            .vrs_gprs[VCPU_REGS_RSP] = hv->mem_size - 8,
+            .vrs_gprs[VCPU_REGS_RDI] = X86_BOOT_INFO_BASE,
             .vrs_crs[VCPU_REGS_CR0] = X86_CR0_INIT,
             .vrs_crs[VCPU_REGS_CR3] = X86_CR3_INIT,
             .vrs_crs[VCPU_REGS_CR4] = X86_CR4_INIT,
@@ -131,7 +131,7 @@ void ukvm_hv_vcpu_init(struct ukvm_hv *hv, ukvm_gpa_t gpa_ep,
             .vrs_idtr = { 0x0, 0xFFFF, 0x0, 0x0},
             .vrs_sregs[VCPU_REGS_LDTR] = sreg_to_vsi(&ukvm_x86_sreg_unusable),
             .vrs_sregs[VCPU_REGS_TR] = sreg_to_vsi(&ukvm_x86_sreg_tr),
-            .vrs_msrs[VCPU_REGS_EFER] = X86_EFER_LME,
+            .vrs_msrs[VCPU_REGS_EFER] = 0ULL, //X86_EFER_INIT, // X86_EFER_LME
             .vrs_msrs[VCPU_REGS_STAR] = 0ULL,
             .vrs_msrs[VCPU_REGS_LSTAR] = 0ULL,
             .vrs_msrs[VCPU_REGS_CSTAR] = 0ULL,
@@ -149,9 +149,9 @@ void ukvm_hv_vcpu_init(struct ukvm_hv *hv, ukvm_gpa_t gpa_ep,
     bi->mem_size = hv->mem_size;
     bi->kernel_end = gpa_kend;
     bi->cmdline = X86_CMDLINE_BASE; 
-    bi->cpu.tsc_freq = get_tsc_freq();
+    bi->cpu.tsc_freq = get_tsc_freq_mhz() * 1000;
 
-	if (ioctl(hvb->vmd_fd, VMM_IOC_RESETCPU, &vrp) < 0)
+    if (ioctl(hvb->vmd_fd, VMM_IOC_RESETCPU, &vrp) < 0)
         err(1, "Cannot reset VCPU - exiting.");
 
     *cmdline = (char *)(hv->mem + X86_CMDLINE_BASE);
@@ -160,28 +160,24 @@ void ukvm_hv_vcpu_init(struct ukvm_hv *hv, ukvm_gpa_t gpa_ep,
 void ukvm_hv_vcpu_loop(struct ukvm_hv *hv) {
     
     struct ukvm_hvb         *hvb = hv->b;
-	struct vm_run_params    *vrp;
-    uint8_t vcpu_hlt; // TODO do something when we halt
+    struct vm_run_params    *vrp;
 
-	vrp = malloc(sizeof(struct vm_run_params));
-	if (vrp == NULL)
+    vrp = malloc(sizeof(struct vm_run_params));
+    if (vrp == NULL)
         err(1, "calloc vrp");
 
     vrp->vrp_exit = malloc(sizeof(union vm_exit));
-	if (vrp == NULL)
+    if (vrp == NULL)
         err(1, "calloc vrp_exit");
 
     vrp->vrp_vm_id = hvb->vcp_id;
     vrp->vrp_vcpu_id = hvb->vcpu_id;
-	vrp->vrp_continue = 0;
+    vrp->vrp_continue = 0;
 
-	for (;;) {
-        warnx("before VMM_IOC_RUN");
+    for (;;) {
         vrp->vrp_irq = 0xFFFF;
-		if (ioctl(hvb->vmd_fd, VMM_IOC_RUN, vrp) < 0) {
-			/* If run ioctl failed, exit */
+        if (ioctl(hvb->vmd_fd, VMM_IOC_RUN, vrp) < 0)
 			err(errno, "ukvm_hv_vcpu_loop: vm / vcpu run ioctl failed");
-		}
         warnx("after VMM_IOC_RUN");
 
 		/* If the VM is terminating, exit normally */
@@ -189,9 +185,9 @@ void ukvm_hv_vcpu_loop(struct ukvm_hv *hv) {
             return;
 		}
         
-        union vm_exit *vei = vrp->vrp_exit;
+       union vm_exit *vei = vrp->vrp_exit;
 
-		if (vrp->vrp_exit_reason != VM_EXIT_NONE) {
+        if (vrp->vrp_exit_reason != VM_EXIT_NONE) {
             switch (vrp->vrp_exit_reason) {
             case VMX_EXIT_INT_WINDOW:
             case VMX_EXIT_CPUID:
@@ -222,7 +218,7 @@ void ukvm_hv_vcpu_loop(struct ukvm_hv *hv) {
                 break;
             case VMX_EXIT_HLT:
             case SVM_VMEXIT_HLT:
-                vcpu_hlt = 1;
+                // stop on exit
                 break;
             case VMX_EXIT_TRIPLE_FAULT:
             case SVM_VMEXIT_SHUTDOWN:

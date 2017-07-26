@@ -106,7 +106,6 @@ case ${TARGET} in
         add_header ukvm_hv_freebsd.h ukvm_cpu_x86_64.h
 	;;
     amd64-*-openbsd6.1*)
-# x86_64-*-openbsd6.1*)
         add_obj ukvm_hv_openbsd.o ukvm_hv_openbsd_x86_64.o ukvm_cpu_x86_64.o
         add_header ukvm_hv_openbsd.h ukvm_cpu_x86_64.h
 	;;

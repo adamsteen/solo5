@@ -29,11 +29,8 @@
 #include <sys/sysctl.h>
 #include <machine/vmmvar.h>
 #include <sys/param.h>
-//#include <sys/cpuset.h>
-//#include <machine/vmm_dev.h>
 
 #include "ukvm.h"
-#include "ukvm_hv_openbsd.h"
 #include "ukvm_gdb_x86_64.h"
 #include "ukvm_gdb.h"
 

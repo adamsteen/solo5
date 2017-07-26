@@ -55,7 +55,7 @@ case ${TARGET} in
     x86_64-*)
 	TARGET_ARCH=x86_64
         ;;
-            amd64-*)		
+    amd64-*)		
 	TARGET_ARCH=x86_64		
         ;;
     *)
@@ -166,7 +166,7 @@ case $(uname -s) in
         fi
         ;;
     *)
-            die "Unsupported build OS: $(uname -s) or target: $TARGET"
+        die "Unsupported build OS: $(uname -s) or target: $TARGET"
         ;;
 esac
 

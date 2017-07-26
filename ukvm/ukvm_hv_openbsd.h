@@ -28,7 +28,7 @@
 #define VMM_NODE		"/dev/vmm"
 
 struct ukvm_hvb {
-	int      vmd_fd;
+    int      vmd_fd;
     uint32_t vcp_id;
     uint32_t vcpu_id;
 };

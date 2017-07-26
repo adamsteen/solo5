@@ -49,10 +49,10 @@ struct ukvm_hv *ukvm_hv_init(size_t mem_size)
     struct ukvm_hv          *hv;
     struct ukvm_hvb         *hvb;
     struct vm_create_params *vcp;
-	struct vm_mem_range *vmr;
-	void *p;
+    struct vm_mem_range *vmr;
+    void *p;
 
-	hv = calloc(1, sizeof (struct ukvm_hv));
+    hv = calloc(1, sizeof (struct ukvm_hv));
     if (hv == NULL)
         err(1, "calloc hv");
     
@@ -68,12 +68,12 @@ struct ukvm_hv *ukvm_hv_init(size_t mem_size)
         err(1, "VMM_NODE");
 
     vcp = calloc(1, sizeof (struct vm_create_params));
-	vcp->vcp_ncpus = 1;
+    vcp->vcp_ncpus = 1;
     strlcpy(vcp->vcp_name, "ukvm", VMM_MAX_NAME_LEN);
     
-	vcp->vcp_nmemranges = 1;
-	vcp->vcp_memranges[0].vmr_gpa = 0x0;
-	vcp->vcp_memranges[0].vmr_size = mem_size;
+    vcp->vcp_nmemranges = 1;
+    vcp->vcp_memranges[0].vmr_gpa = 0x0;
+    vcp->vcp_memranges[0].vmr_size = mem_size;
 	
     vmr = &vcp->vcp_memranges[0];
     p = mmap(NULL, vmr->vmr_size, PROT_READ | PROT_WRITE,
@@ -86,7 +86,7 @@ struct ukvm_hv *ukvm_hv_init(size_t mem_size)
     hv->mem_size = mem_size;
 
     if (ioctl(hvb->vmd_fd, VMM_IOC_CREATE, vcp) < 0)
-		err(errno, "create vmm ioctl failed - exiting");
+        err(errno, "create vmm ioctl failed - exiting");
 
     hvb->vcp_id = vcp->vcp_id;
     hvb->vcpu_id = 0;

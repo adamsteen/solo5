@@ -132,7 +132,12 @@ void ukvm_elf_load(const char *file, uint8_t *mem, size_t mem_size,
             || hdr.e_ident[EI_MAG3] != ELFMAG3
             || hdr.e_ident[EI_CLASS] != ELFCLASS64
             || hdr.e_type != ET_EXEC
-            || hdr.e_machine != EM_AMD64)
+#if defined(__OpenBSD__) 
+            || hdr.e_machine != EM_AMD64
+#else
+            || hdr.e_machine != EM_X86_64
+#endif
+       )
         goto out_invalid;
 
     ph_off = hdr.e_phoff;
