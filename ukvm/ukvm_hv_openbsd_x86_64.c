@@ -136,7 +136,7 @@ void ukvm_hv_vcpu_init(struct ukvm_hv *hv, ukvm_gpa_t gpa_ep,
             .vrs_idtr = { 0x0, 0xFFFF, 0x0, 0x0},
             .vrs_sregs[VCPU_REGS_LDTR] = sreg_to_vsi(&ukvm_x86_sreg_unusable),
             .vrs_sregs[VCPU_REGS_TR] = sreg_to_vsi(&ukvm_x86_sreg_tr),
-            .vrs_msrs[VCPU_REGS_EFER] = 0ULL, //X86_EFER_INIT, // X86_EFER_LME
+            .vrs_msrs[VCPU_REGS_EFER] = X86_EFER_INIT,
             .vrs_msrs[VCPU_REGS_STAR] = 0ULL,
             .vrs_msrs[VCPU_REGS_LSTAR] = 0ULL,
             .vrs_msrs[VCPU_REGS_CSTAR] = 0ULL,
