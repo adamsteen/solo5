@@ -61,6 +61,10 @@
 
 #include "ukvm_gdb_openbsd_x86_64.c"
 
+#elif defined(__linux__) && defined(__aarch64__)
+
+#include "ukvm_gdb_kvm_aarch64.c"
+
 #else
 
 #error Unsupported target
@@ -645,11 +649,14 @@ static int setup(struct ukvm_hv *hv)
 
 static int handle_cmdarg(char *cmdarg)
 {
-    if (!strncmp("--gdb", cmdarg, 5)) {
+    if (!strcmp("--gdb", cmdarg)) {
         use_gdb = true;
         return 0;
-    } else if (!strncmp("--port=", cmdarg, 7)) {
-        portno = strtol(cmdarg + 7, NULL, 10);
+    } else if (!strncmp("--gdb-port=", cmdarg, 11)) {
+        int rc = sscanf(cmdarg, "--gdb-port=%d", &portno);
+        if (rc != 1 || portno < 0 || portno > 65535) {
+            errx(1, "Malformed argument to --gdb-port");
+        }
         return 0;
     }
     return -1;
@@ -658,7 +665,7 @@ static int handle_cmdarg(char *cmdarg)
 static char *usage(void)
 {
     return "--gdb (optional flag for running in a gdb debug session)\n"
-        "    [ --port=1234 ] (port to use) ";
+        "    [ --gdb-port=1234 ] (port to use) ";
 }
 
 struct ukvm_module ukvm_module_gdb = {
