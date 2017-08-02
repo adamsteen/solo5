@@ -184,8 +184,6 @@ void ukvm_hv_vcpu_loop(struct ukvm_hv *hv) {
         if (ioctl(hvb->vmd_fd, VMM_IOC_RUN, vrp) < 0)
 			err(errno, "ukvm_hv_vcpu_loop: vm / vcpu run ioctl failed");
 
-        warnx("after VMM_IOC_RUN ioctl");
-
 		/* If the VM is terminating, exit normally */
         if (vrp->vrp_exit_reason == VM_EXIT_TERMINATED) {
             return;
