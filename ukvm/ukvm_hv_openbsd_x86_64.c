@@ -33,63 +33,41 @@
 #include <string.h>
 
 #include <sys/ioctl.h>
-#include <sys/mman.h>
+#include <sys/time.h>
 #include <sys/types.h>
 #include <sys/sysctl.h>
+#include <machine/cpu.h>
 #include <machine/vmmvar.h>
 #include <machine/specialreg.h>
-#include <sys/param.h>
-#include <unistd.h>
-#include <sys/time.h>
 
 #include "ukvm.h"
 #include "ukvm_hv_openbsd.h"
 #include "ukvm_cpu_x86_64.h"
 
-uint64_t rdtsc();
-uint64_t rdtscp();
 uint64_t get_tsc_freq();
 static struct vcpu_segment_info sreg_to_vsi(const struct x86_sreg *);
 
-uint64_t rdtscp()
+uint64_t get_tsc_freq()
 {
-    uint32_t lo, hi;
-     __asm__ __volatile__ ("RDTSCP\n\t"
-                           "mov %%edx, %0\n\t"
-                           "mov %%eax, %1\n\t"
-                           "CPUID\n\t": "=r" (hi), "=r" (lo):: "%rax", "%rbx", "%rcx", "%rdx");
-    return (uint64_t)hi << 32 | lo;
-}
+    int invariant_tsc;
+    static const int invar_mib[2] = { CTL_MACHDEP, CPU_INVARIANTTSC };
+    static const int freq_mib[2] = { CTL_MACHDEP, CPU_TSCFREQ };
+    uint64_t tsc_freq;
+    size_t len;
 
-uint64_t rdtsc()
-{
-    uint32_t lo, hi;
-     __asm__ __volatile__ ("CPUID\n\t"
-                           "RDTSC\n\t"
-                           "mov %%edx, %0\n\t"
-                           "mov %%eax, %1\n\t": "=r" (hi), "=r" (lo)::
-                           "%rax", "%rbx", "%rcx", "%rdx");;
-    return (uint64_t)hi << 32 | lo;
-}
+    len = sizeof(invariant_tsc);
+    if (sysctl(invar_mib, 2, &invariant_tsc, &len, NULL, 0) == -1)
+        err(1, "sysctl invariant_tsc");
 
-uint64_t get_tsc_freq() {
-
-    uint64_t start_timestamp, end_timestamp;
-    struct timeval tv_start, tv_end;
-
-    gettimeofday(&tv_start, NULL);
-    start_timestamp = rdtsc();
-    while (1) {
-        gettimeofday(&tv_end, NULL);
-        if (tv_end.tv_sec > tv_start.tv_sec + 1)
-            break;
+    if(invariant_tsc) {
+        len = sizeof(tsc_freq);
+        if (sysctl(freq_mib, 2, &tsc_freq, &len, NULL, 0) == -1)
+            err(1, "sysctl tsc_freq");
+    } else {
+        errx(1, "Host TSC is not invariant, cannot continue");
     }
-    end_timestamp = rdtscp();
 
-    uint64_t cycles = end_timestamp - start_timestamp;
-    uint64_t usec = (tv_end.tv_sec - tv_start.tv_sec) * 1000000 + (tv_end.tv_usec - tv_start.tv_usec);
-    // convert to cycles per second
-    return 1000000 * cycles / usec;
+    return tsc_freq;
 }
 
 static struct vcpu_segment_info sreg_to_vsi(const struct x86_sreg *sreg)
@@ -125,7 +103,7 @@ void ukvm_hv_vcpu_init(struct ukvm_hv *hv, ukvm_gpa_t gpa_ep,
             .vrs_gprs[VCPU_REGS_RDI] = X86_BOOT_INFO_BASE,
             .vrs_crs[VCPU_REGS_CR0] = X86_CR0_INIT,
             .vrs_crs[VCPU_REGS_CR3] = X86_CR3_INIT,
-            .vrs_crs[VCPU_REGS_CR4] = X86_CR4_INIT,
+            .vrs_crs[VCPU_REGS_CR4] = (X86_CR4_INIT | X86_CR4_VMXE),
             .vrs_sregs[VCPU_REGS_CS] = sreg_to_vsi(&ukvm_x86_sreg_code),
             .vrs_sregs[VCPU_REGS_DS] = sreg_to_vsi(&ukvm_x86_sreg_data),
             .vrs_sregs[VCPU_REGS_ES] = sreg_to_vsi(&ukvm_x86_sreg_data),
@@ -233,6 +211,6 @@ void ukvm_hv_vcpu_loop(struct ukvm_hv *hv) {
             }
 
             vrp->vrp_continue = 1;
-		}
-	}
+        }
+    }
 }

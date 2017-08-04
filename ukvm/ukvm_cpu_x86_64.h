@@ -77,7 +77,7 @@
  * for now and revisit later.
  */
 #define X86_CR4_INIT            (X86_CR4_PAE | X86_CR4_OSFXSR | \
-                                X86_CR4_OSXMMEXCPT | X86_CR4_VMXE )
+                                X86_CR4_OSXMMEXCPT )
 
 /* 
  * Intel CPU features in EFER
