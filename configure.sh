@@ -154,7 +154,7 @@ case $(uname -s) in
         BUILD_MUEN="no" # has not been tested
         ;;
     *)
-        die "Unsupported build OS: $(uname -s) or target: $TARGET"
+        die "Unsupported build OS: $(uname -s)"
         ;;
 esac
 
