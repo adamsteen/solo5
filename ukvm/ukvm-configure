@@ -106,7 +106,7 @@ case ${TARGET} in
         add_header ukvm_hv_freebsd.h ukvm_cpu_x86_64.h
         ;;
     amd64-*-openbsd6.1*)
-        UKVM_LDFLAGS="${UKVM_LDFLAGS} -z wxallowed"
+        UKVM_LDFLAGS="${UKVM_LDFLAGS} -z wxneeded"
         add_obj ukvm_hv_openbsd.o ukvm_hv_openbsd_x86_64.o ukvm_cpu_x86_64.o
         add_header ukvm_hv_openbsd.h ukvm_cpu_x86_64.h
         ;;

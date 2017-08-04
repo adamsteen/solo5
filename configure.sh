@@ -128,45 +128,30 @@ case $(uname -s) in
         BUILD_MUEN="yes"
         ;;
     OpenBSD)		
-        TARGET=$(${CC} -dumpmachine)
-        if [ "$TARGET" = "x86_64-elf" ]; then
-            # On x86_64-elf/gcc we use -nostdinc and copy all the gcc-provided headers.
-            cc_is_gcc || die "Only 'gcc' 4.x+ is supported on x86_64-elf"
-            CC_INCDIR=$(${CC} -print-file-name=include)
-            [ -d "${CC_INCDIR}" ] || die "Cannot determine gcc include directory"
-            mkdir -p ${HOST_INCDIR}
-            cp -R ${CC_INCDIR}/. ${HOST_INCDIR}
+        # On OpenBSD/clang we use -nostdlibinc which gives us access to the
+        # clang-provided headers for compiler instrinsics. We copy the rest
+        # (std*.h, float.h and their dependencies) from the host.
+        cc_is_clang || die "Only 'clang' is supported on OpenBSD"
+        [ "${TARGET_ARCH}" = "x86_64" ] ||
+            die "Only 'x86_64' is supported on OpenBSD"
+        INCDIR=/usr/include
+        SRCS_MACH="machine/cdefs.h machine/_types.h"
+        SRCS_SYS="sys/cdefs.h sys/_null.h sys/_types.h"
+        SRCS_X86=""
+        SRCS="stdbool.h stddef.h stdint.h stdarg.h"
 
-            HOST_CFLAGS="-nostdinc"
-            BUILD_UKVM="yes"
-            BUILD_VIRTIO="yes"
-            BUILD_MUEN="yes"
-        else
-            # On OpenBSD/clang we use -nostdlibinc which gives us access to the		
-            # clang-provided headers for compiler instrinsics. We copy the rest		
-            # (std*.h, float.h and their dependencies) from the host.		
-            cc_is_clang || die "Only 'clang' is supported on OpenBSD"		
-            [ "${TARGET_ARCH}" = "x86_64" ] ||		
-                die "Only 'x86_64' is supported on OpenBSD"		
-            INCDIR=/usr/include		
-            SRCS_MACH="machine/cdefs.h machine/_types.h"		
-            SRCS_SYS="sys/cdefs.h sys/_null.h sys/_types.h"		
-            SRCS_X86=""		
-            SRCS="stdbool.h stddef.h stdint.h stdarg.h"		
-            
-            mkdir -p ${HOST_INCDIR}		
-            mkdir -p ${HOST_INCDIR}/machine ${HOST_INCDIR}/sys ${HOST_INCDIR}/x86		
-            for f in ${SRCS_MACH}; do cp -f ${INCDIR}/$f ${HOST_INCDIR}/machine; done		
-            for f in ${SRCS_SYS}; do cp -f ${INCDIR}/$f ${HOST_INCDIR}/sys; done		
-            for f in ${SRCS_X86}; do cp -f ${INCDIR}/$f ${HOST_INCDIR}/x86; done		
-            for f in ${SRCS}; do cp -f ${INCDIR}/$f ${HOST_INCDIR}; done		
-        
-            HOST_CFLAGS="-fno-pie -fno-stack-protector -nostdlibinc"		
-            HOST_LDFLAGS="-nopie"		
-            BUILD_UKVM="yes"		
-            BUILD_VIRTIO="yes"		
-            BUILD_MUEN="yes"		
-        fi
+        mkdir -p ${HOST_INCDIR}
+        mkdir -p ${HOST_INCDIR}/machine ${HOST_INCDIR}/sys ${HOST_INCDIR}/x86
+        for f in ${SRCS_MACH}; do cp -f ${INCDIR}/$f ${HOST_INCDIR}/machine; done
+        for f in ${SRCS_SYS}; do cp -f ${INCDIR}/$f ${HOST_INCDIR}/sys; done
+        for f in ${SRCS_X86}; do cp -f ${INCDIR}/$f ${HOST_INCDIR}/x86; done
+        for f in ${SRCS}; do cp -f ${INCDIR}/$f ${HOST_INCDIR}; done
+
+        HOST_CFLAGS="-fno-pie -fno-stack-protector -nostdlibinc"
+        HOST_LDFLAGS="-nopie"
+        BUILD_UKVM="yes"
+        BUILD_VIRTIO="no" # has not been tested
+        BUILD_MUEN="no" # has not been tested
         ;;
     *)
         die "Unsupported build OS: $(uname -s) or target: $TARGET"
