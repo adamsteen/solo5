@@ -19,7 +19,7 @@
  */
 
 /*
- * ukvm_hv_openbsd_x86_64.c: x86_64 architecture-dependent part of FreeBSD
+ * ukvm_hv_openbsd_x86_64.c: x86_64 architecture-dependent part of OpenBSD
  * vmm(4) backend implementation.
  */
 
