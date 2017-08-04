@@ -44,6 +44,30 @@
 #include "ukvm.h"
 #include "ukvm_hv_openbsd.h"
 
+/*
+ * TODO: To ensure that the VM is correctly destroyed on shutdown (normal or
+ * not) we currently install an atexit() handler. The top-level API will need
+ * to be changed to accomodate this, e.g. by introducing a ukvm_hv_shutdown(),
+ * however this is incompatible with the current "fail fast" approach to
+ * internal error handling.
+ */
+static struct ukvm_hv *cleanup_hv;
+
+static void cleanup_vmd_fd(void)
+{
+    if (cleanup_hv != NULL && cleanup_hv->b->vmd_fd != -1)
+        close(cleanup_hv->b->vmd_fd);
+}
+
+static void cleanup_vm(void)
+{
+    if (cleanup_hv != NULL && cleanup_hv->b->vcp_id != -1) {
+        struct vm_terminate_params vtp = { .vtp_vm_id = cleanup_hv->b->vcp_id };
+        if (ioctl(cleanup_hv->b->vmd_fd, VMM_IOC_TERM, &vtp) < 0)
+            err(errno, "terminate vmm ioctl failed - still exiting");
+    }
+}
+
 struct ukvm_hv *ukvm_hv_init(size_t mem_size)
 {
     struct ukvm_hv          *hv;
@@ -66,6 +90,9 @@ struct ukvm_hv *ukvm_hv_init(size_t mem_size)
     hvb->vmd_fd = open(VMM_NODE, O_RDWR);
     if (hvb->vmd_fd == -1)
         err(1, "VMM_NODE");
+
+    cleanup_hv = hv;
+    atexit(cleanup_vmd_fd);
 
     vcp = calloc(1, sizeof (struct vm_create_params));
     vcp->vcp_ncpus = 1;
@@ -90,6 +117,8 @@ struct ukvm_hv *ukvm_hv_init(size_t mem_size)
 
     hvb->vcp_id = vcp->vcp_id;
     hvb->vcpu_id = 0;
+
+    atexit(cleanup_vm);
 
     return hv;
 }
