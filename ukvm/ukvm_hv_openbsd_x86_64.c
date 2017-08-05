@@ -140,8 +140,8 @@ void ukvm_hv_vcpu_init(struct ukvm_hv *hv, ukvm_gpa_t gpa_ep,
     *cmdline = (char *)(hv->mem + X86_CMDLINE_BASE);
 }
 
-void ukvm_hv_vcpu_loop(struct ukvm_hv *hv) {
-    
+void ukvm_hv_vcpu_loop(struct ukvm_hv *hv)
+{
     struct ukvm_hvb         *hvb = hv->b;
     struct vm_run_params    *vrp;
 
@@ -159,8 +159,13 @@ void ukvm_hv_vcpu_loop(struct ukvm_hv *hv) {
 
     for (;;) {
         vrp->vrp_irq = 0xFFFF;
-        if (ioctl(hvb->vmd_fd, VMM_IOC_RUN, vrp) < 0)
-			err(errno, "ukvm_hv_vcpu_loop: vm / vcpu run ioctl failed");
+
+        if (ioctl(hvb->vmd_fd, VMM_IOC_RUN, vrp) < 0) {
+            if(errno == EIO) // guest halted with interrupts disabled, ie cli, hlt
+                return;
+
+            err(errno, "ukvm_hv_vcpu_loop: vm / vcpu run ioctl failed");
+        }
 
 		/* If the VM is terminating, exit normally */
         if (vrp->vrp_exit_reason == VM_EXIT_TERMINATED) {
