@@ -137,14 +137,12 @@ case $(uname -s) in
         INCDIR=/usr/include
         SRCS_MACH="machine/cdefs.h machine/_types.h"
         SRCS_SYS="sys/cdefs.h sys/_null.h sys/_types.h"
-        SRCS_X86=""
         SRCS="stdbool.h stddef.h stdint.h stdarg.h"
 
         mkdir -p ${HOST_INCDIR}
         mkdir -p ${HOST_INCDIR}/machine ${HOST_INCDIR}/sys ${HOST_INCDIR}/x86
         for f in ${SRCS_MACH}; do cp -f ${INCDIR}/$f ${HOST_INCDIR}/machine; done
         for f in ${SRCS_SYS}; do cp -f ${INCDIR}/$f ${HOST_INCDIR}/sys; done
-        for f in ${SRCS_X86}; do cp -f ${INCDIR}/$f ${HOST_INCDIR}/x86; done
         for f in ${SRCS}; do cp -f ${INCDIR}/$f ${HOST_INCDIR}; done
 
         HOST_CFLAGS="-fno-pie -fno-stack-protector -nostdlibinc"
