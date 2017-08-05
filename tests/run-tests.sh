@@ -153,6 +153,9 @@ run_test ()
                 FreeBSD)
                     # TODO, just try and run the test anyway
                     ;;
+                OpenBSD)
+                    # TODO, just try and run the test anyway
+                    ;;
                 *)
                     die "Don't know how to run ${NAME} on ${OS}"
                     ;;
