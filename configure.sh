@@ -55,8 +55,8 @@ case ${TARGET} in
     x86_64-*)
 	TARGET_ARCH=x86_64
         ;;
-    amd64-*)		
-	TARGET_ARCH=x86_64		
+    amd64-*)
+	TARGET_ARCH=x86_64
         ;;
     aarch64-*)
 	TARGET_ARCH=aarch64
@@ -127,10 +127,10 @@ case $(uname -s) in
         BUILD_VIRTIO="yes"
         BUILD_MUEN="yes"
         ;;
-    OpenBSD)		
+    OpenBSD)
         # On OpenBSD/clang we use -nostdlibinc which gives us access to the
         # clang-provided headers for compiler instrinsics. We copy the rest
-        # (std*.h, float.h and their dependencies) from the host.
+        # (std*.h, cdefs.h and their dependencies) from the host.
         cc_is_clang || die "Only 'clang' is supported on OpenBSD"
         [ "${TARGET_ARCH}" = "x86_64" ] ||
             die "Only 'x86_64' is supported on OpenBSD"

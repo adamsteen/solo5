@@ -94,7 +94,7 @@ void ukvm_hv_vcpu_init(struct ukvm_hv *hv, ukvm_gpa_t gpa_ep,
         ukvm_gpa_t gpa_kend, char **cmdline)
 {
     struct ukvm_hvb *hvb = hv->b;
-    
+
     struct vm_resetcpu_params vrp = {
         .vrp_vm_id = hvb->vcp_id,
         .vrp_vcpu_id = hvb->vcpu_id,
@@ -146,9 +146,9 @@ void ukvm_hv_vcpu_loop(struct ukvm_hv *hv)
 {
     struct ukvm_hvb         *hvb = hv->b;
     struct vm_run_params    *vrp;
-	struct passwd *pw;
-	uid_t uid;
-	gid_t gid;
+    struct passwd *pw;
+    uid_t uid;
+    gid_t gid;
 
     vrp = malloc(sizeof(struct vm_run_params));
     if (vrp == NULL)
@@ -163,23 +163,23 @@ void ukvm_hv_vcpu_loop(struct ukvm_hv *hv)
     vrp->vrp_continue = 0;
 
 
-	if ((pw = getpwnam(VMD_USER)) == NULL)
+    if ((pw = getpwnam(VMD_USER)) == NULL)
         err(1, "can't get _vmd user");
-	uid = pw->pw_uid;
-	gid = pw->pw_gid;
+    uid = pw->pw_uid;
+    gid = pw->pw_gid;
 
-	if (setgroups(1, &gid) ||
-	    setresgid(gid, gid, gid) ||
-	    setresuid(uid, uid, uid))
-		err(1, "unable to revoke privs");
+    if (setgroups(1, &gid) ||
+        setresgid(gid, gid, gid) ||
+        setresuid(uid, uid, uid))
+        err(1, "unable to revoke privs");
 
-	/*
-	 * pledge in the vm processes:
-	 * stdio - for malloc and basic I/O including events.
-	 * vmm - for the vmm ioctls and operations.
-	 */
-	if (pledge("stdio vmm", NULL) == -1)
-		err(errno, "pledge");
+    /*
+     * pledge in the vm processes:
+     * stdio - for malloc and basic I/O including events.
+     * vmm - for the vmm ioctls and operations.
+     */
+    if (pledge("stdio vmm", NULL) == -1)
+        err(errno, "pledge");
 
     for (;;) {
         vrp->vrp_irq = 0xFFFF;
@@ -191,7 +191,7 @@ void ukvm_hv_vcpu_loop(struct ukvm_hv *hv)
             err(errno, "ukvm_hv_vcpu_loop: vm / vcpu run ioctl failed");
         }
 
-		/* If the VM is terminating, exit normally */
+        /* If the VM is terminating, exit normally */
         if (vrp->vrp_exit_reason == VM_EXIT_TERMINATED) {
             return;
         }

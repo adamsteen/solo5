@@ -79,11 +79,11 @@ struct ukvm_hv *ukvm_hv_init(size_t mem_size)
     hv = calloc(1, sizeof (struct ukvm_hv));
     if (hv == NULL)
         err(1, "calloc hv");
-    
+
     hvb = calloc(1, sizeof (struct ukvm_hvb));
     if (hvb == NULL)
         err(1, "calloc");
-    
+
     hv->b = hvb;
     hvb->vmd_fd = -1;
 
@@ -97,11 +97,11 @@ struct ukvm_hv *ukvm_hv_init(size_t mem_size)
     vcp = calloc(1, sizeof (struct vm_create_params));
     vcp->vcp_ncpus = 1;
     strlcpy(vcp->vcp_name, "ukvm", VMM_MAX_NAME_LEN);
-    
+
     vcp->vcp_nmemranges = 1;
     vcp->vcp_memranges[0].vmr_gpa = 0x0;
     vcp->vcp_memranges[0].vmr_size = mem_size;
-	
+
     vmr = &vcp->vcp_memranges[0];
     p = mmap(NULL, vmr->vmr_size, PROT_READ | PROT_WRITE,
         MAP_PRIVATE | MAP_ANON, -1, 0);
