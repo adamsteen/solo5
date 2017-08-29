@@ -25,7 +25,8 @@
 #ifndef UKVM_HV_OPENBSD_H
 #define UKVM_HV_OPENBSD_H
 
-#define VMM_NODE		"/dev/vmm"
+#define VMM_NODE   	"/dev/vmm"
+#define	VMD_USER    "_vmd"
 
 struct ukvm_hvb {
     int      vmd_fd;
