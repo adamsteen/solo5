@@ -43,6 +43,11 @@ cc_is_gcc()
     cc_maybe_gcc && ! cc_is_clang
 }
 
+ld_is_lld()
+{
+	${LD} --version 2>&1 | grep -q '^LLD'
+}
+
 # Allow external override of CC.
 # TODO: This needs further work to provide full support for cross-compiling and
 # correctly pass through to ukvm-configure where required.
@@ -134,6 +139,10 @@ case $(uname -s) in
         cc_is_clang || die "Only 'clang' is supported on OpenBSD"
         [ "${TARGET_ARCH}" = "x86_64" ] ||
             die "Only 'x86_64' is supported on OpenBSD"
+        if ! ld_is_lld; then
+			echo "gnu ld on OpenBSD is too old to generate the correct elf sections, using ld.lld";
+			LD="ld.lld"
+        fi
         INCDIR=/usr/include
         SRCS_MACH="machine/cdefs.h machine/_types.h"
         SRCS_SYS="sys/cdefs.h sys/_null.h sys/_types.h"
@@ -165,4 +174,5 @@ HOST_CFLAGS=${HOST_CFLAGS}
 HOST_LDFLAGS=${HOST_LDFLAGS}
 TARGET_ARCH=${TARGET_ARCH}
 CC=${CC}
+LD=${LD}
 EOM
