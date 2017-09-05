@@ -75,6 +75,11 @@ struct ukvm_hv *ukvm_hv_init(size_t mem_size)
     struct vm_create_params *vcp;
     struct vm_mem_range *vmr;
     void *p;
+    
+	if(geteuid() != 0) {
+        errno = EPERM;
+		err(1, "need root privileges");
+	}
 
     hv = calloc(1, sizeof (struct ukvm_hv));
     if (hv == NULL)
