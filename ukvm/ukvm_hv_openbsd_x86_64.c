@@ -168,6 +168,12 @@ void ukvm_hv_vcpu_loop(struct ukvm_hv *hv)
     uid = pw->pw_uid;
     gid = pw->pw_gid;
 
+	if (chroot(pw->pw_dir) == -1)
+		err(1, "chroot: %s", pw->pw_dir);
+
+	if (chdir("/") == -1)
+		err(1, "chdir(\"/\")");
+
     if (setgroups(1, &gid) ||
         setresgid(gid, gid, gid) ||
         setresuid(uid, uid, uid))
