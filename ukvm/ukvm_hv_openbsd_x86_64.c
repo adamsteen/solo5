@@ -162,7 +162,6 @@ void ukvm_hv_vcpu_loop(struct ukvm_hv *hv)
     vrp->vrp_vcpu_id = hvb->vcpu_id;
     vrp->vrp_continue = 0;
 
-
     if ((pw = getpwnam(VMD_USER)) == NULL)
         err(1, "can't get _vmd user");
     uid = pw->pw_uid;
