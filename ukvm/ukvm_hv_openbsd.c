@@ -100,7 +100,7 @@ struct ukvm_hv *ukvm_hv_init(size_t mem_size)
     atexit(cleanup_vmd_fd);
 
     vcp = calloc(1, sizeof (struct vm_create_params));
-    vcp->vcp_ncpus = 1;
+    vcp->vcp_ncpus = 1; // vmm only supports 1 cpu for now.
     strlcpy(vcp->vcp_name, "ukvm", VMM_MAX_NAME_LEN);
 
     vcp->vcp_nmemranges = 1;
@@ -121,7 +121,7 @@ struct ukvm_hv *ukvm_hv_init(size_t mem_size)
         err(errno, "create vmm ioctl failed - exiting");
 
     hvb->vcp_id = vcp->vcp_id;
-    hvb->vcpu_id = 0;
+    hvb->vcpu_id = 0; // the first and only cpu is at 0
 
     atexit(cleanup_vm);
 
