@@ -98,6 +98,7 @@ void ukvm_hv_vcpu_init(struct ukvm_hv *hv, ukvm_gpa_t gpa_ep,
     struct vm_resetcpu_params vrp = {
         .vrp_vm_id = hvb->vcp_id,
         .vrp_vcpu_id = hvb->vcpu_id,
+        .vrp_ug = 0,
         .vrp_init_state = {
             .vrs_gprs[VCPU_REGS_RFLAGS] = X86_RFLAGS_INIT,
             .vrs_gprs[VCPU_REGS_RIP] = gpa_ep,
