@@ -27,11 +27,7 @@
 
 #define _GNU_SOURCE
 #include <err.h>
-#if defined(__OpenBSD__)
-    #include <elf_abi.h>
-#else
-    #include <elf.h>
-#endif
+#include <elf.h>
 #include <errno.h>
 #include <fcntl.h>
 #include <limits.h>
