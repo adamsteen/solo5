@@ -52,6 +52,7 @@ ld_is_lld()
 # TODO: This needs further work to provide full support for cross-compiling and
 # correctly pass through to ukvm-configure where required.
 CC=${CC:-cc}
+LD=${LD:-ld}
 
 TARGET=$(${CC} -dumpmachine)
 [ $? -ne 0 ] &&
