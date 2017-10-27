@@ -146,7 +146,7 @@ case $(uname -s) in
         fi
         INCDIR=/usr/include
         SRCS_MACH="machine/cdefs.h machine/_float.h machine/_types.h"
-        SRCS_SYS="sys/cdefs.h sys/_null.h sys/_types.h"
+        SRCS_SYS="sys/cdefs.h sys/_null.h sys/signal.h sys/_types.h"
         SRCS_AMD64="amd64/_float.h"
         SRCS="float.h stdbool.h stddef.h stdint.h stdarg.h"
 
