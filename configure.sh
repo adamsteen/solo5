@@ -148,14 +148,13 @@ case $(uname -s) in
         SRCS_MACH="machine/cdefs.h machine/_types.h"
         SRCS_SYS="sys/cdefs.h sys/_null.h sys/_types.h"
         SRCS_AMD64="amd64/_float.h"
-        SRCS="float.h, stdbool.h stddef.h stdint.h stdarg.h"
+        SRCS="float.h stdbool.h stddef.h stdint.h stdarg.h"
 
         mkdir -p ${HOST_INCDIR}
-        mkdir -p ${HOST_INCDIR}/machine ${HOST_INCDIR}/sys ${HOST_INCDIR}/x86
+        mkdir -p ${HOST_INCDIR}/machine ${HOST_INCDIR}/sys ${HOST_INCDIR}/amd64
         for f in ${SRCS_MACH}; do cp -f ${INCDIR}/$f ${HOST_INCDIR}/machine; done
         for f in ${SRCS_SYS}; do cp -f ${INCDIR}/$f ${HOST_INCDIR}/sys; done
-        for f in ${SRCS_AMD64}; do cp -f ${INCDIR}/$f ${HOST_INCDIR}/x86; done
-        for f in ${SRCS}; do cp -f ${INCDIR}/$f ${HOST_INCDIR}; done
+        for f in ${SRCS_AMD64}; do cp -f ${INCDIR}/$f ${HOST_INCDIR}/amd64; done
         for f in ${SRCS}; do cp -f ${INCDIR}/$f ${HOST_INCDIR}; done
 
         HOST_CFLAGS="-fno-pie -fno-stack-protector -nostdlibinc"
