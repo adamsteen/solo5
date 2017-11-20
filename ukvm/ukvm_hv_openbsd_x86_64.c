@@ -90,6 +90,10 @@ static struct vcpu_segment_info sreg_to_vsi(const struct x86_sreg *sreg)
     return vsi;
 }
 
+void ukvm_hv_mem_size(size_t *mem_size) {
+    ukvm_x86_mem_size(mem_size);
+}
+
 void ukvm_hv_vcpu_init(struct ukvm_hv *hv, ukvm_gpa_t gpa_ep,
         ukvm_gpa_t gpa_kend, char **cmdline)
 {
