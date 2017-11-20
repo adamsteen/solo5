@@ -146,9 +146,9 @@ case $(uname -s) in
         fi
         INCDIR=/usr/include
         SRCS_MACH="machine/cdefs.h machine/_float.h machine/_types.h machine/signal.h machine/setjmp.h"
-        SRCS_SYS="sys/cdefs.h sys/_null.h sys/signal.h sys/siginfo.h sys/_types.h"
+        SRCS_SYS="sys/cdefs.h sys/_null.h sys/signal.h sys/siginfo.h sys/time.h sys/_types.h"
         SRCS_AMD64="amd64/_float.h amd64/signal.h"
-        SRCS="float.h setjmp.h stdbool.h stddef.h stdint.h stdarg.h signal.h"
+        SRCS="float.h setjmp.h stdbool.h stddef.h stdint.h stdarg.h signal.h time.h"
 
         mkdir -p ${HOST_INCDIR}
         mkdir -p ${HOST_INCDIR}/machine ${HOST_INCDIR}/sys ${HOST_INCDIR}/amd64
