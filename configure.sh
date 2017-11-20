@@ -142,8 +142,8 @@ case $(uname -s) in
             die "Only 'x86_64' is supported on OpenBSD"
         ld_is_lld || die "Only 'ld.lld' is supported on OpenBSD"
         INCDIR=/usr/include
-        SRCS_MACH="machine/cdefs.h machine/endian.h machine/_float.h machine/_types.h"
-        SRCS_SYS="sys/cdefs.h sys/endian.h sys/_endian.h sys/_null.h sys/select.h sys/time.h sys/_time.h sys/_types.h"
+        SRCS_MACH="machine/cdefs.h machine/endian.h machine/_float.h machine/signal.h machine/_types.h"
+        SRCS_SYS="sys/cdefs.h sys/endian.h sys/_endian.h sys/_null.h sys/signal.h sys/select.h sys/time.h sys/_time.h sys/_types.h"
         SRCS_AMD64="amd64/endian.h amd64/_float.h"
         SRCS="float.h stdbool.h stddef.h stdint.h stdarg.h time.h"
 
