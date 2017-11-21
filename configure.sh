@@ -143,9 +143,9 @@ case $(uname -s) in
         ld_is_lld || die "Only 'ld.lld' is supported on OpenBSD"
         INCDIR=/usr/include
         SRCS_MACH="machine/cdefs.h machine/_types.h machine/_float.h machine/signal.h machine/setjmp.h"
-        SRCS_SYS="sys/cdefs.h sys/_null.h sys/_types.h sys/siginfo.h sys/signal.h"
+        SRCS_SYS="sys/cdefs.h sys/_null.h sys/_types.h sys/siginfo.h sys/signal.h sys/types.h"
         SRCS_AMD64=""
-        SRCS="stdbool.h stddef.h stdint.h stdarg.h float.h signal.h setjmp.h"
+        SRCS="stdbool.h stddef.h stdint.h stdarg.h float.h signal.h setjmp.h time.h"
 
         mkdir -p ${HOST_INCDIR}
         mkdir -p ${HOST_INCDIR}/machine ${HOST_INCDIR}/sys ${HOST_INCDIR}/amd64
