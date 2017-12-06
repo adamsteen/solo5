@@ -142,10 +142,10 @@ case $(uname -s) in
             die "Only 'x86_64' is supported on OpenBSD"
         ld_is_lld || die "Only 'ld.lld' is supported on OpenBSD"
         INCDIR=/usr/include
-        SRCS_MACH="machine/cdefs.h machine/_types.h machine/_float.h machine/signal.h machine/setjmp.h machine/endian.h"
-        SRCS_SYS="sys/cdefs.h sys/_null.h sys/_types.h sys/siginfo.h sys/signal.h sys/types.h sys/endian.h sys/_endian.h"
-        SRCS_AMD64="amd64/endian.h"
-        SRCS="stdbool.h stddef.h stdint.h stdarg.h float.h signal.h setjmp.h time.h"
+        SRCS_MACH="machine/_types.h machine/cdefs.h"
+        SRCS_SYS="sys/_null.h sys/_types.h sys/cdefs.h"
+        SRCS_AMD64=""
+        SRCS="float.h time.h stddef.h stdint.h stdbool.h stdarg.h"
 
         mkdir -p ${HOST_INCDIR}
         mkdir -p ${HOST_INCDIR}/machine ${HOST_INCDIR}/sys ${HOST_INCDIR}/amd64
