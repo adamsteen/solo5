@@ -145,7 +145,7 @@ case $(uname -s) in
         SRCS_MACH="machine/_float.h machine/_types.h machine/endian.h machine/cdefs.h"
         SRCS_SYS="sys/_null.h sys/_types.h sys/cdefs.h sys/_endian.h sys/siginfo.h"
         SRCS_AMD64="amd64/_float.h, amd64/stdarg.h amd64/endian.h amd64/_types.h"
-        SRCS="float.h time.h stddef.h stdint.h stdbool.h stdarg.h"
+        SRCS="float.h time.h stddef.h stdint.h stdbool.h stdarg.h signal.h"
 
         mkdir -p ${HOST_INCDIR}
         mkdir -p ${HOST_INCDIR}/machine ${HOST_INCDIR}/sys ${HOST_INCDIR}/amd64
