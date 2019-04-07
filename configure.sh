@@ -142,6 +142,8 @@ case "${CONFIG_HOST}" in
                 die "GCC 4.9.0 or newer is required for -mstack-protector-guard= support"
             MAKECONF_CFLAGS="${MAKECONF_CFLAGS} -mstack-protector-guard=global"
         fi
+        SSP_GUARD=__stack_chk_guard
+        SSP_FAIL=__stack_chk_fail
 
         # If the host toolchain is NOT configured to build PIE exectuables by
         # default, assume it has no support for that and apply a workaround by
@@ -190,6 +192,8 @@ case "${CONFIG_HOST}" in
         # FreeBSD toolchains use a global (non-TLS) __stack_chk_guard by
         # default on x86_64, so there is nothing special we need to do here.
         MAKECONF_CFLAGS="-nostdlibinc"
+        SSP_GUARD=__stack_chk_guard
+        SSP_FAIL=__stack_chk_fail
 
         CONFIG_HVT=1
 	CONFIG_SPT=
@@ -202,7 +206,7 @@ case "${CONFIG_HOST}" in
         # clang-provided headers for compiler instrinsics. We copy the rest
         # (std*.h, cdefs.h and their dependencies) from the host.
         cc_is_clang || die "Only 'clang' is supported on OpenBSD"
-	[ "${CONFIG_ARCH}" = "x86_64" ] ||
+        [ "${CONFIG_ARCH}" = "x86_64" ] ||
             die "Only 'x86_64' is supported on OpenBSD"
         if ! ld_is_lld; then
             LD='/usr/bin/ld.lld'
@@ -225,20 +229,17 @@ case "${CONFIG_HOST}" in
 
         # Stack smashing protection:
         #
-        # The OpenBSD toolchain has it's own idea of how SSP is implemented
-        # (see TargetLoweringBase::getIRStackGuard() in the LLVM source), which
-        # we don't support yet. Unfortunately LLVM does not support
-        # -mstack-protector-guard, so disable SSP on OpenBSD for the time
-        # being.
-        MAKECONF_CFLAGS="-fno-stack-protector -mno-retpoline -nostdlibinc"
-        warn "Stack protector (SSP) disabled on OpenBSD due to toolchain issues"
+        SSP_GUARD=__guard_local
+        SSP_FAIL=__stack_smash_handler
+
+        MAKECONF_CFLAGS="-mno-retpoline -fno-ret-protector -nostdlibinc"
         MAKECONF_LDFLAGS="-nopie"
 
         CONFIG_HVT=1
-	CONFIG_SPT=
-	[ "${CONFIG_ARCH}" = "x86_64" ] && CONFIG_VIRTIO=1
-	[ "${CONFIG_ARCH}" = "x86_64" ] && CONFIG_MUEN=1
-	CONFIG_GENODE=
+        CONFIG_SPT=
+        [ "${CONFIG_ARCH}" = "x86_64" ] && CONFIG_VIRTIO=1
+        [ "${CONFIG_ARCH}" = "x86_64" ] && CONFIG_MUEN=1
+        CONFIG_GENODE=
         ;;
     *)
         die "Unsupported build OS: ${CONFIG_HOST}"
@@ -276,6 +277,8 @@ CONFIG_HOST=${CONFIG_HOST}
 MAKECONF_CC=${CC}
 MAKECONF_LD=${LD}
 CONFIG_SPT_NO_PIE=${CONFIG_SPT_NO_PIE}
+SSP_GUARD=${SSP_GUARD}
+SSP_FAIL=${SSP_FAIL}
 EOM
 
 echo "${prog_NAME}: Configured for ${CC_MACHINE}."
