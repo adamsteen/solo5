@@ -28,8 +28,6 @@
 #include <stdint.h>
 #include <stdio.h>
 #include <string.h>
-#include <seccomp.h>
-#include <sys/epoll.h>
 
 #include "../common/tap_attach.h"
 #include "spt.h"
@@ -101,6 +99,7 @@ static int handle_cmdarg(char *cmdarg, struct mft *mft)
 
 static int setup(struct spt *spt, struct mft *mft)
 {
+<<<<<<< HEAD
     if (!module_in_use)
         return 0;
 
@@ -135,6 +134,20 @@ static int setup(struct spt *spt, struct mft *mft)
             errx(1, "seccomp_rule_add(write, fd=%d) failed: %s",
                     mft->e[i].hostfd, strerror(-rc));
     }
+    if (netiface == NULL)
+        return 0; /* not set up == not present */
+
+    netfd = tap_attach(netiface);
+    if (netfd < 0)
+        err(1, "Could not attach interface: %s", netiface);
+
+    if (!cmdline_mac)
+        tap_attach_genmac(guest_mac);
+
+    spt->bi->neti.present = 1;
+    memcpy(spt->bi->neti.mac_address, guest_mac,
+            sizeof spt->bi->neti.mac_address);
+    spt->bi->neti.hostfd = netfd;
 
     return 0;
 }
