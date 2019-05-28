@@ -34,13 +34,8 @@
 #include <string.h>
 #include <sys/mman.h>
 #include <time.h>
-#include <sys/personality.h>
 #include <sys/epoll.h>
 #include <sys/timerfd.h>
-
-#if defined(__x86_64__)
-#include <asm/prctl.h>
-#endif
 
 #include "spt.h"
 
@@ -96,20 +91,6 @@ struct spt *spt_init(size_t mem_size)
                 " as a PIE executable.");
     }
 #endif
-
-    /*
-     * Sooo... it turns out that at least on some distributions, the Linux
-     * "personality" flag READ_IMPLIES_EXEC is the default unless linked with
-     * -z noexecstack. This is bad, as it results in mmap() with PROT_READ
-     *  implying PROT_EXEC. Cowardly refuse to run on such systems.
-     */
-    int persona = -1;
-    persona = personality(0xffffffff);
-    assert(persona >= 0);
-    if (persona & READ_IMPLIES_EXEC)
-        errx(1, "Cowardly refusing to run with a sys_personality of "
-                "READ_IMPLIES_EXEC. Please report a bug, with details of your "
-                "Linux distribution and GCC version");
 
     /*
      * spt->mem is addressed starting at 0, however we cannot actually map it

@@ -231,7 +231,7 @@ case "${CONFIG_HOST}" in
         MAKECONF_LDFLAGS="-nopie"
 
         CONFIG_HVT=1
-        CONFIG_SPT=
+        CONFIG_SPT=1
         [ "${CONFIG_ARCH}" = "x86_64" ] && CONFIG_VIRTIO=1
         [ "${CONFIG_ARCH}" = "x86_64" ] && CONFIG_MUEN=1
         CONFIG_GENODE=
