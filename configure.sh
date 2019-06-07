@@ -156,15 +156,11 @@ case "${CONFIG_HOST}" in
             CONFIG_SPT_NO_PIE=1
         fi
 
-        CONFIG_HVT=1
-        if gcc_check_lib -lseccomp; then
-            CONFIG_SPT=1
-        else
-            warn "Could not link with -lseccomp, not building spt"
-        fi
-        [ "${CONFIG_ARCH}" = "x86_64" ] && CONFIG_VIRTIO=1
-        [ "${CONFIG_ARCH}" = "x86_64" ] && CONFIG_MUEN=1
-        [ "${CONFIG_ARCH}" = "x86_64" ] && CONFIG_GENODE=1
+        CONFIG_HVT=
+        CONFIG_SPT=1
+        [ "${CONFIG_ARCH}" = "x86_64" ] && CONFIG_VIRTIO=
+        [ "${CONFIG_ARCH}" = "x86_64" ] && CONFIG_MUEN=
+        [ "${CONFIG_ARCH}" = "x86_64" ] && CONFIG_GENODE=
         ;;
     FreeBSD)
         # On FreeBSD/clang we use -nostdlibinc which gives us access to the
@@ -195,10 +191,10 @@ case "${CONFIG_HOST}" in
         # default on x86_64, so there is nothing special we need to do here.
         MAKECONF_CFLAGS="-nostdlibinc"
 
-        CONFIG_HVT=1
-        CONFIG_SPT=
-        [ "${CONFIG_ARCH}" = "x86_64" ] && CONFIG_VIRTIO=1
-        [ "${CONFIG_ARCH}" = "x86_64" ] && CONFIG_MUEN=1
+        CONFIG_HVT=
+        CONFIG_SPT=1
+        [ "${CONFIG_ARCH}" = "x86_64" ] && CONFIG_VIRTIO=
+        [ "${CONFIG_ARCH}" = "x86_64" ] && CONFIG_MUEN=
         CONFIG_GENODE=
         ;;
     OpenBSD)
@@ -230,10 +226,10 @@ case "${CONFIG_HOST}" in
         MAKECONF_CFLAGS="-mno-retpoline -fno-ret-protector -nostdlibinc"
         MAKECONF_LDFLAGS="-nopie"
 
-        CONFIG_HVT=1
+        CONFIG_HVT=
         CONFIG_SPT=1
-        [ "${CONFIG_ARCH}" = "x86_64" ] && CONFIG_VIRTIO=1
-        [ "${CONFIG_ARCH}" = "x86_64" ] && CONFIG_MUEN=1
+        [ "${CONFIG_ARCH}" = "x86_64" ] && CONFIG_VIRTIO=
+        [ "${CONFIG_ARCH}" = "x86_64" ] && CONFIG_MUEN=
         CONFIG_GENODE=
         ;;
     *)
