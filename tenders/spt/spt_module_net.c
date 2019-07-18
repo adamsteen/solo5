@@ -99,7 +99,6 @@ static int handle_cmdarg(char *cmdarg, struct mft *mft)
 
 static int setup(struct spt *spt, struct mft *mft)
 {
-<<<<<<< HEAD
     if (!module_in_use)
         return 0;
 
@@ -110,37 +109,32 @@ static int setup(struct spt *spt, struct mft *mft)
         if (memcmp(mft->e[i].u.net_basic.mac, no_mac, sizeof no_mac) == 0)
             tap_attach_genmac(mft->e[i].u.net_basic.mac);
 
+        /* XXX use kqueue 
         int rc;
         struct epoll_event ev;
         ev.events = EPOLLIN;
+        */
         /*
          * i is the manifest index, i.e. the solo5_handle_t and will be returned
          * by epoll() as part of any received event.
          */
+        /* XXX use kqueue 
         ev.data.u64 = i;
         rc = epoll_ctl(spt->epollfd, EPOLL_CTL_ADD, mft->e[i].hostfd, &ev);
         if (rc == -1)
             err(1, "epoll_ctl(EPOLL_CTL_ADD, hostfd=%d) failed",
                     mft->e[i].hostfd);
+        */
 
-        rc = seccomp_rule_add(spt->sc_ctx, SCMP_ACT_ALLOW, SCMP_SYS(read), 1,
-                SCMP_A0(SCMP_CMP_EQ, mft->e[i].hostfd));
-        if (rc != 0)
-            errx(1, "seccomp_rule_add(read, fd=%d) failed: %s",
-                    mft->e[i].hostfd, strerror(-rc));
-        rc = seccomp_rule_add(spt->sc_ctx, SCMP_ACT_ALLOW, SCMP_SYS(write), 1,
-                SCMP_A0(SCMP_CMP_EQ, mft->e[i].hostfd));
-        if (rc != 0)
-            errx(1, "seccomp_rule_add(write, fd=%d) failed: %s",
-                    mft->e[i].hostfd, strerror(-rc));
     }
+    /* XXX netiface ???
     if (netiface == NULL)
-        return 0; /* not set up == not present */
+        return 0; *//* not set up == not present */
 
+    /* XXX netiface ???
     netfd = tap_attach(netiface);
     if (netfd < 0)
         err(1, "Could not attach interface: %s", netiface);
-
     if (!cmdline_mac)
         tap_attach_genmac(guest_mac);
 
@@ -149,6 +143,7 @@ static int setup(struct spt *spt, struct mft *mft)
             sizeof spt->bi->neti.mac_address);
     spt->bi->neti.hostfd = netfd;
 
+    */
     return 0;
 }
 

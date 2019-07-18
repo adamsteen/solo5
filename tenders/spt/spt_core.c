@@ -34,8 +34,6 @@
 #include <string.h>
 #include <sys/mman.h>
 #include <time.h>
-#include <sys/epoll.h>
-#include <sys/timerfd.h>
 
 #include "spt.h"
 
@@ -108,6 +106,7 @@ struct spt *spt_init(size_t mem_size)
     spt->mem -= SPT_HOST_MEM_BASE;
     spt->mem_size = mem_size;
 
+    /* XXX use kqueue
     spt->epollfd = epoll_create1(0);
     if (spt->epollfd == -1)
         err(1, "epoll_create1() failed");
@@ -119,6 +118,7 @@ struct spt *spt_init(size_t mem_size)
     ev.data.u64 = SPT_INTERNAL_TIMERFD;
     if (epoll_ctl(spt->epollfd, EPOLL_CTL_ADD, spt->timerfd, &ev) == -1)
         err(1, "epoll_ctl(EPOLL_CTL_ADD) failed");
+    */
 
     return spt;
 }

@@ -70,11 +70,12 @@ static int setup(struct spt *spt, struct mft *mft)
     if (!module_in_use)
         return 0;
 
+    /* XXX blocki ??
     spt->bi->blocki.present = 1;
     spt->bi->blocki.block_size = 512;
     spt->bi->blocki.capacity = capacity;
     spt->bi->blocki.hostfd = diskfd;
-
+    */
     return 0;
 }
 
