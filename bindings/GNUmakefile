@@ -68,7 +68,10 @@ CPPFLAGS+=-D__SOLO5_BINDINGS__
 ifeq ($(CONFIG_ARCH), x86_64)
 # Prevent the compiler from adding optimizations that use shared FPU state.
 # This is necessary for early boot code and trap handlers.
-CFLAGS+=-mno-sse -mno-mmx -mno-aes -mno-avx -mno-red-zone
+CFLAGS+=-mno-sse -mno-mmx -mno-aes -mno-avx
+endif
+ifdef CONFIG_VIRTIO
+CFLAGS+=-mno-red-zone
 endif
 
 %.o: %.c %.d
